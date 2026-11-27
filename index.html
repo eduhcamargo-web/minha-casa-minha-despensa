@@ -54,7 +54,7 @@
        ======================================================= -->
   <div id="app-shell" class="app-shell oculto">
     
-    <!-- Cabeçalho Limpo Inspirado na Referência -->
+    <!-- Cabeçalho Limpo -->
     <header class="app-header">
       <div class="header-conteudo">
         <div class="header-esquerda">
@@ -67,7 +67,6 @@
           </div>
         </div>
 
-        <!-- Pílula Verde-Sálvia à Direita -->
         <button type="button" id="btn-sair" class="btn-pilula-verde" title="Sair da conta">
           <span class="icone-svg-sm" data-icone="sair"></span>
           <span>Sair</span>
@@ -78,34 +77,36 @@
     <!-- Área Central das 7 Telas -->
     <main class="app-conteudo">
 
-      <!-- 1. TELA INICIAL (INÍCIO) -->
+      <!-- =====================================================
+           1. TELA INICIAL (INÍCIO) - MENU RÁPIDO + ESTOQUE VIVO
+           ===================================================== -->
       <section id="tela-inicio" class="tela ativa">
-        <!-- Banner Destaque Verde-Sálvia -->
+        <!-- Banner Destaque Verde-Sálvia com Contador ao Vivo -->
         <div class="banner-destaque-verde">
           <div class="banner-texto">
-            <span class="banner-tag">#MinhaCasaMinhaDespensa</span>
-            <h2>Sua despensa organizada e sincronizada</h2>
-            <p>Visual atualizado com paleta pastel e ícones fluidos pronto para a Fase 4.</p>
+            <span class="banner-tag">#DespensaEmTempoReal</span>
+            <h2 id="resumo-total-itens">Carregando estoque da casa...</h2>
+            <p>Acompanhe abaixo tudo o que temos em casa hoje.</p>
           </div>
           <div class="banner-circulo-icone">
             <span class="icone-svg-lg" data-icone="despensa"></span>
           </div>
         </div>
 
-        <!-- Prévia dos 6 Atalhos Rápidos no Estilo Pastel -->
+        <!-- Menu Rápido com Exatamente 6 Botões Intuitivos -->
         <div class="secao-topo-linha">
-          <h3>Acesso Rápido</h3>
-          <button type="button" class="link-sutil" data-ir-para="ajuda">Ver Guia</button>
+          <h3>Menu Rápido</h3>
+          <span class="texto-auxiliar-topo">Atalhos do dia a dia</span>
         </div>
 
         <div class="grade-atalhos-preview">
-          <button type="button" class="tile-pastel tile-verde" data-ir-para="despensa">
+          <button type="button" id="atalho-cadastrar-produto" class="tile-pastel tile-verde">
             <span class="tile-icone" data-icone="cadastrar"></span>
-            <span class="tile-nome">Cadastrar</span>
+            <span class="tile-nome">Cadastrar Produto</span>
           </button>
           <button type="button" class="tile-pastel tile-pessego" data-ir-para="retirada">
             <span class="tile-icone" data-icone="retirar"></span>
-            <span class="tile-nome">Retirar</span>
+            <span class="tile-nome">Retirar Item</span>
           </button>
           <button type="button" class="tile-pastel tile-lavanda" data-ir-para="receitas">
             <span class="tile-icone" data-icone="receitas"></span>
@@ -113,7 +114,7 @@
           </button>
           <button type="button" class="tile-pastel tile-azul" data-ir-para="compras">
             <span class="tile-icone" data-icone="compras"></span>
-            <span class="tile-nome">Compras</span>
+            <span class="tile-nome">Lista de Compras</span>
           </button>
           <button type="button" class="tile-pastel tile-rosa" data-ir-para="alertas">
             <span class="tile-icone" data-icone="alertas"></span>
@@ -124,26 +125,176 @@
             <span class="tile-nome">Como Usar</span>
           </button>
         </div>
+
+        <!-- Barra de Pesquisa Rápida no Estoque Vivo -->
+        <div class="barra-busca-wrapper">
+          <span class="busca-icone" data-icone="busca"></span>
+          <input type="search" id="busca-inicio" placeholder="Buscar item na despensa (ex: arroz, detergente)...">
+        </div>
+
+        <!-- Resumo Vivo: Bloco 1 - MANTIMENTOS -->
+        <div class="bloco-estoque-vivo">
+          <div class="bloco-estoque-cabecalho cabecalho-mantimentos">
+            <div class="bloco-titulo-grupo">
+              <span class="bolinha-indicadora" style="background-color: var(--pastel-verde-icone);"></span>
+              <h3>Mantimentos</h3>
+            </div>
+            <span id="contagem-mantimentos" class="contador-pilula badge-verde-suave">0 itens</span>
+          </div>
+          <div id="lista-vivo-mantimentos" class="lista-cards-estoque">
+            <p class="estado-vazio">Carregando mantimentos...</p>
+          </div>
+        </div>
+
+        <!-- Resumo Vivo: Bloco 2 - MATERIAL DE LIMPEZA -->
+        <div class="bloco-estoque-vivo">
+          <div class="bloco-estoque-cabecalho cabecalho-limpeza">
+            <div class="bloco-titulo-grupo">
+              <span class="bolinha-indicadora" style="background-color: var(--pastel-azul-icone);"></span>
+              <h3>Material de Limpeza</h3>
+            </div>
+            <span id="contagem-limpeza" class="contador-pilula badge-azul-suave">0 itens</span>
+          </div>
+          <div id="lista-vivo-limpeza" class="lista-cards-estoque">
+            <p class="estado-vazio">Carregando materiais de limpeza...</p>
+          </div>
+        </div>
       </section>
 
-      <!-- 2. TELA DE DESPENSA E CADASTRO -->
+      <!-- =====================================================
+           2. TELA DE DESPENSA E CADASTRO DE PRODUTOS
+           ===================================================== -->
       <section id="tela-despensa" class="tela">
-        <div class="cabecalho-secao">
-          <h2>Controle da Despensa</h2>
-          <p>Gerencie mantimentos e materiais de limpeza</p>
+        <div class="cabecalho-secao-flex">
+          <div>
+            <h2>Controle da Despensa</h2>
+            <p>Cadastre e organize os produtos da casa</p>
+          </div>
+          <button type="button" id="btn-abrir-form-produto" class="btn btn-primario">
+            <span class="icone-svg-sm" data-icone="cadastrar"></span>
+            <span>+ Cadastrar</span>
+          </button>
         </div>
-        <div class="faixa-pastel faixa-azul">
-          <div class="faixa-info">
-            <h3>Módulo Despensa</h3>
-            <p>Na <strong>Fase 4</strong>, construiremos aqui o formulário completo de cadastro com categorias dependentes e cálculo opcional de rendimento em xícaras.</p>
+
+        <!-- Mensagem de feedback ao salvar/editar/excluir -->
+        <div id="despensa-mensagem" class="mensagem-feedback oculto" role="alert"></div>
+
+        <!-- Formulário de Cadastro / Edição de Produto -->
+        <div id="painel-form-produto" class="cartao-formulario oculto">
+          <div class="cartao-form-topo">
+            <h3 id="titulo-form-produto">Novo Produto na Despensa</h3>
+            <button type="button" id="btn-fechar-form-produto" class="btn-icone-fechar" title="Fechar formulário">
+              <span class="icone-svg-sm" data-icone="fechar"></span>
+            </button>
           </div>
-          <div class="faixa-emblema-branco">
-            <span class="icone-svg" data-icone="despensa"></span>
+
+          <form id="form-produto" class="formulario-padrao">
+            <input type="hidden" id="produto-id-edicao" value="">
+
+            <!-- Grupo Principal (Mantimentos ou Material de Limpeza) -->
+            <div class="campo-grupo">
+              <label for="prod-grupo">1. Grupo Principal *</label>
+              <select id="prod-grupo" required>
+                <option value="Mantimentos">Mantimentos</option>
+                <option value="Material de Limpeza">Material de Limpeza</option>
+              </select>
+              <small class="dica-campo">Define se o item aparecerá na seção de alimentos ou de limpeza.</small>
+            </div>
+
+            <!-- Subcategoria Dependente -->
+            <div class="campo-grupo">
+              <label for="prod-categoria">2. Subcategoria *</label>
+              <select id="prod-categoria" required></select>
+              <small class="dica-campo">Opções filtradas automaticamente conforme o grupo escolhido acima.</small>
+            </div>
+
+            <!-- Nome do Produto -->
+            <div class="campo-grupo">
+              <label for="prod-nome">3. Nome do Produto *</label>
+              <input type="text" id="prod-nome" placeholder="Ex: Arroz Branco, Feijão Carioca, Detergente Neutro" required>
+              <small class="dica-campo">Escreva o nome simples como a família procura no dia a dia.</small>
+            </div>
+
+            <!-- Tamanho da Embalagem e Unidade -->
+            <div class="grade-dois-campos">
+              <div class="campo-grupo">
+                <label for="prod-tamanho">4. Tamanho do Pacote Fechado *</label>
+                <input type="number" id="prod-tamanho" step="0.01" min="0.01" placeholder="Ex: 500 ou 1" required>
+                <small class="dica-campo">Peso ou volume de 1 embalagem inteira.</small>
+              </div>
+
+              <div class="campo-grupo">
+                <label for="prod-unidade">5. Unidade da Embalagem *</label>
+                <select id="prod-unidade" required></select>
+                <small class="dica-campo">Medida escrita no rótulo do pacote.</small>
+              </div>
+            </div>
+
+            <!-- Quantidade Atual e Estoque Mínimo -->
+            <div class="grade-dois-campos">
+              <div class="campo-grupo">
+                <label for="prod-quantidade">6. Quantidade Atual em Casa *</label>
+                <input type="number" id="prod-quantidade" step="0.01" min="0" placeholder="Ex: 2 ou 0.5" required>
+                <small class="dica-campo">Em pacotes/unidades. Aceita frações (ex: 0.5 para meio pacote).</small>
+              </div>
+
+              <div class="campo-grupo">
+                <label for="prod-minimo">7. Estoque Mínimo (Alerta) *</label>
+                <input type="number" id="prod-minimo" step="0.01" min="0" placeholder="Ex: 1" required>
+                <small class="dica-campo">Quando chegar nesse valor, o app avisa para comprar.</small>
+              </div>
+            </div>
+
+            <!-- Chave Condicional: Rendimento em Xícaras -->
+            <div class="caixa-checkbox-pastel">
+              <label class="checkbox-label" for="prod-usa-xicaras">
+                <input type="checkbox" id="prod-usa-xicaras">
+                <span class="checkbox-texto">
+                  <strong>Calcular rendimento em xícaras?</strong>
+                  <small>Marque para ingredientes secos ou medidos por xícara em receitas (arroz, farinha, açúcar, aveia).</small>
+                </span>
+              </label>
+
+              <!-- Campo extra liberado somente quando a caixa acima é marcada -->
+              <div id="grupo-rendimento-xicaras" class="campo-condicional oculto">
+                <div class="campo-grupo">
+                  <label for="prod-xicaras-por-embalagem">Quantas xícaras rende 1 pacote inteiro?</label>
+                  <input type="number" id="prod-xicaras-por-embalagem" step="0.1" min="0.1" placeholder="Ex: 6">
+                  <small class="dica-campo">Garante desconto exato quando você usar xícaras nas receitas ou retiradas.</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="acoes-formulario">
+              <button type="button" id="btn-cancelar-produto" class="btn btn-google">Cancelar</button>
+              <button type="submit" id="btn-salvar-produto" class="btn btn-primario">Salvar na Despensa</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Filtros e Busca na Tela de Despensa -->
+        <div class="filtros-despensa-barra">
+          <div class="abas-filtro">
+            <button type="button" class="aba-filtro ativa" data-filtro-grupo="Todos">Todos</button>
+            <button type="button" class="aba-filtro" data-filtro-grupo="Mantimentos">Mantimentos</button>
+            <button type="button" class="aba-filtro" data-filtro-grupo="Material de Limpeza">Limpeza</button>
           </div>
+
+          <div class="barra-busca-wrapper sem-margem-topo">
+            <span class="busca-icone" data-icone="busca"></span>
+            <input type="search" id="busca-despensa" placeholder="Filtrar produtos cadastrados...">
+          </div>
+        </div>
+
+        <!-- Lista Completa de Gerenciamento (Editar / Excluir) -->
+        <div id="lista-gerenciar-despensa" class="lista-cards-estoque">
+          <p class="estado-vazio">Carregando produtos...</p>
         </div>
       </section>
 
-      <!-- 3. TELA DEDICADA DE RETIRADA -->
+      <!-- =====================================================
+           3. TELA DEDICADA DE RETIRADA
+           ===================================================== -->
       <section id="tela-retirada" class="tela">
         <div class="cabecalho-secao">
           <h2>Retirada de Item</h2>
@@ -160,7 +311,9 @@
         </div>
       </section>
 
-      <!-- 4. TELA DE RECEITAS INTELIGENTES -->
+      <!-- =====================================================
+           4. TELA DE RECEITAS INTELIGENTES
+           ===================================================== -->
       <section id="tela-receitas" class="tela">
         <div class="cabecalho-secao">
           <h2>Receitas da Família</h2>
@@ -177,7 +330,9 @@
         </div>
       </section>
 
-      <!-- 5. TELA DE LISTA DE COMPRAS INTERATIVA -->
+      <!-- =====================================================
+           5. TELA DE LISTA DE COMPRAS INTERATIVA
+           ===================================================== -->
       <section id="tela-compras" class="tela">
         <div class="cabecalho-secao">
           <h2>Lista de Compras</h2>
@@ -194,7 +349,9 @@
         </div>
       </section>
 
-      <!-- 6. TELA EXCLUSIVA DE ALERTAS -->
+      <!-- =====================================================
+           6. TELA EXCLUSIVA DE ALERTAS
+           ===================================================== -->
       <section id="tela-alertas" class="tela">
         <div class="cabecalho-secao">
           <h2>Alertas de Reposição</h2>
@@ -211,20 +368,20 @@
         </div>
       </section>
 
-      <!-- 7. TELA DE AJUDA / COMO USAR (FAIXAS PASTÉIS COM ÍCONES FLUIDOS) -->
+      <!-- =====================================================
+           7. TELA DE AJUDA / COMO USAR
+           ===================================================== -->
       <section id="tela-ajuda" class="tela">
         <div class="cabecalho-secao">
           <h2>Como Usar o App</h2>
           <p>Guia rápido em 7 passos para toda a família</p>
         </div>
-
-        <!-- Lista renderizada em faixas pastéis com círculo branco à direita -->
         <div id="lista-passos-ajuda" class="lista-faixas-ajuda"></div>
       </section>
 
     </main>
 
-    <!-- Barra de Navegação Inferior Fixa com Ícones Fluidos -->
+    <!-- Barra de Navegação Inferior Fixa -->
     <nav class="barra-navegacao" aria-label="Navegação principal">
       <button type="button" class="nav-item ativo" data-tela="inicio">
         <span class="nav-icone-svg" data-icone="casa"></span>
