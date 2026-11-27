@@ -287,7 +287,6 @@
 
         <div id="retirada-mensagem" class="mensagem-feedback oculto" role="alert"></div>
 
-        <!-- Cartão do Formulário Exclusivo de Retirada -->
         <div class="cartao-formulario">
           <div class="cartao-form-topo">
             <h3>Registrar Consumo / Saída</h3>
@@ -295,7 +294,6 @@
           </div>
 
           <form id="form-retirada" class="formulario-padrao">
-            <!-- Seleção apenas de produtos com saldo > 0 -->
             <div class="campo-grupo">
               <label for="retirada-produto">1. Produto da Despensa *</label>
               <select id="retirada-produto" required>
@@ -304,7 +302,6 @@
               <small class="dica-campo">Apenas itens com saldo maior que zero em casa aparecem nesta lista.</small>
             </div>
 
-            <!-- Campos que surgem após selecionar o produto -->
             <div id="grupo-campos-retirada" class="campos-dinamicos-retirada oculto">
               <div id="info-saldo-selecionado" class="caixa-info-produto-retirada"></div>
 
@@ -322,7 +319,6 @@
                 </div>
               </div>
 
-              <!-- Prévia matemática em tempo real antes de confirmar -->
               <div id="preview-conversao-retirada" class="caixa-preview-conversao oculto"></div>
 
               <button type="submit" id="btn-confirmar-retirada" class="btn btn-primario btn-bloco">
@@ -333,7 +329,6 @@
           </form>
         </div>
 
-        <!-- Histórico Recente de Retiradas da Família -->
         <div class="bloco-estoque-vivo">
           <div class="bloco-estoque-cabecalho">
             <div class="bloco-titulo-grupo">
@@ -349,20 +344,137 @@
       </section>
 
       <!-- =====================================================
-           4. TELA DE RECEITAS INTELIGENTES
+           4. TELA DE RECEITAS INTELIGENTES (FASE 6)
            ===================================================== -->
       <section id="tela-receitas" class="tela">
-        <div class="cabecalho-secao">
-          <h2>Receitas da Família</h2>
-          <p>Verificação automática de ingredientes em casa</p>
-        </div>
-        <div class="faixa-pastel faixa-lavanda">
-          <div class="faixa-info">
-            <h3>Checagem Verde / Vermelha</h3>
-            <p>Na <strong>Fase 6</strong>, implementaremos aqui o cadastro de receitas e o selo inteligente que calcula se todos os ingredientes estão disponíveis na despensa.</p>
+        <div class="cabecalho-secao-flex">
+          <div>
+            <h2>Receitas da Família</h2>
+            <p>Verificação automática de ingredientes em casa</p>
           </div>
-          <div class="faixa-emblema-branco">
-            <span class="icone-svg" data-icone="receitas"></span>
+          <button type="button" id="btn-abrir-form-receita" class="btn btn-primario">
+            <span class="icone-svg-sm" data-icone="cadastrar"></span>
+            <span>+ Nova Receita</span>
+          </button>
+        </div>
+
+        <div id="receitas-mensagem" class="mensagem-feedback oculto" role="alert"></div>
+
+        <!-- Formulário de Cadastro / Edição de Receita -->
+        <div id="painel-form-receita" class="cartao-formulario oculto">
+          <div class="cartao-form-topo">
+            <h3 id="titulo-form-receita">Nova Receita</h3>
+            <button type="button" id="btn-fechar-form-receita" class="btn-icone-fechar" title="Fechar formulário">
+              <span class="icone-svg-sm" data-icone="fechar"></span>
+            </button>
+          </div>
+
+          <form id="form-receita" class="formulario-padrao">
+            <input type="hidden" id="receita-id-edicao" value="">
+
+            <div class="campo-grupo">
+              <label for="rec-nome">1. Nome do Prato *</label>
+              <input type="text" id="rec-nome" placeholder="Ex: Arroz Soltinho, Bolo de Cenoura, Panqueca" required>
+              <small class="dica-campo">Escolha um nome claro para toda a família identificar rápido.</small>
+            </div>
+
+            <div class="grade-dois-campos">
+              <div class="campo-grupo">
+                <label for="rec-tipo">2. Tipo de Refeição *</label>
+                <select id="rec-tipo" required>
+                  <option value="Almoço / Jantar">Almoço / Jantar</option>
+                  <option value="Café da Manhã">Café da Manhã</option>
+                  <option value="Lanche / Sobremesa">Lanche / Sobremesa</option>
+                  <option value="Acompanhamento">Acompanhamento</option>
+                  <option value="Bebida / Outros">Bebida / Outros</option>
+                </select>
+                <small class="dica-campo">Ajuda a filtrar as opções na hora de cozinhar.</small>
+              </div>
+
+              <div class="campo-grupo">
+                <label for="rec-tempo">3. Tempo de Preparo *</label>
+                <input type="text" id="rec-tempo" placeholder="Ex: 30 min ou 1h 15min" required>
+                <small class="dica-campo">Tempo estimado do início ao prato pronto.</small>
+              </div>
+            </div>
+
+            <!-- Lista Dinâmica de Ingredientes Vinculados à Despensa -->
+            <div class="caixa-ingredientes-form">
+              <div class="topo-ingredientes-form">
+                <div>
+                  <label>4. Ingredientes Vinculados à Despensa *</label>
+                  <small class="dica-campo">Selecione cada produto e a medida usada na receita.</small>
+                </div>
+                <button type="button" id="btn-adicionar-ingrediente-form" class="btn-add-mini">
+                  + Ingrediente
+                </button>
+              </div>
+
+              <div id="lista-inputs-ingredientes" class="lista-linhas-ingredientes"></div>
+            </div>
+
+            <div class="campo-grupo">
+              <label for="rec-modo">5. Modo de Fazer *</label>
+              <textarea id="rec-modo" rows="5" placeholder="Descreva o passo a passo do preparo..." required></textarea>
+              <small class="dica-campo">Escreva de forma simples para qualquer pessoa da casa conseguir preparar.</small>
+            </div>
+
+            <div class="acoes-formulario">
+              <button type="button" id="btn-cancelar-receita" class="btn btn-google">Cancelar</button>
+              <button type="submit" id="btn-salvar-receita" class="btn btn-primario">Salvar Receita</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Painel de Visualização Aberta de Uma Receita (Com Selo Verde/Vermelho) -->
+        <div id="painel-detalhe-receita" class="cartao-detalhe-receita oculto">
+          <div class="detalhe-receita-barra-topo">
+            <button type="button" id="btn-voltar-receitas" class="btn-voltar-sutil">
+              <span class="icone-svg-sm" data-icone="voltar"></span>
+              <span>Voltar para Receitas</span>
+            </button>
+
+            <div class="acoes-item-despensa">
+              <button type="button" id="btn-editar-receita-aberta" class="btn-mini-acao editar" title="Editar esta receita">
+                <span data-icone="editar"></span>
+              </button>
+              <button type="button" id="btn-excluir-receita-aberta" class="btn-mini-acao excluir" title="Excluir esta receita">
+                <span data-icone="lixeira"></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Selo Dinâmico Calculado em Tempo Real (Verde ou Vermelho) -->
+          <div id="selo-disponibilidade-receita" class="selo-receita-status"></div>
+
+          <div class="detalhe-receita-cabecalho">
+            <div class="detalhe-tags">
+              <span id="detalhe-rec-tipo" class="tag-pastel-mini badge-lavanda-mini"></span>
+              <span id="detalhe-rec-tempo" class="tag-tempo-receita"></span>
+            </div>
+            <h3 id="detalhe-rec-nome"></h3>
+          </div>
+
+          <div class="detalhe-bloco">
+            <h4>Ingredientes Necessários</h4>
+            <div id="detalhe-rec-ingredientes" class="lista-ingredientes-detalhe"></div>
+          </div>
+
+          <div class="detalhe-bloco">
+            <h4>Modo de Fazer</h4>
+            <div id="detalhe-rec-modo" class="texto-modo-preparo"></div>
+          </div>
+        </div>
+
+        <!-- Visão Principal: Busca e Lista de Receitas Cadastradas -->
+        <div id="visao-lista-receitas">
+          <div class="barra-busca-wrapper sem-margem-topo">
+            <span class="busca-icone" data-icone="busca"></span>
+            <input type="search" id="busca-receitas" placeholder="Buscar receita por nome ou refeição...">
+          </div>
+
+          <div id="lista-cards-receitas" class="lista-cards-estoque">
+            <p class="estado-vazio">Carregando receitas...</p>
           </div>
         </div>
       </section>

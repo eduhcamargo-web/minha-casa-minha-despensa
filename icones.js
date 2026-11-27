@@ -51,7 +51,13 @@ export const ICONES = Object.freeze({
   fechar: `<svg ${SVG_BASE}><path d="M6.5 6.5L17.5 17.5"/><path d="M17.5 6.5L6.5 17.5"/></svg>`,
 
   // Triângulo suave de alerta (Estoque mínimo / zerado)
-  alertaTriangulo: `<svg ${SVG_BASE}><path d="M10.4 4.8L3.8 16.4C3.1 17.6 4 19.1 5.4 19.1H18.6C20 19.1 20.9 17.6 20.2 16.4L13.6 4.8C12.9 3.6 11.1 3.6 10.4 4.8Z"/><path d="M12 9.5V13"/><circle cx="12" cy="16" r="0.6" fill="currentColor"/></svg>`
+  alertaTriangulo: `<svg ${SVG_BASE}><path d="M10.4 4.8L3.8 16.4C3.1 17.6 4 19.1 5.4 19.1H18.6C20 19.1 20.9 17.6 20.2 16.4L13.6 4.8C12.9 3.6 11.1 3.6 10.4 4.8Z"/><path d="M12 9.5V13"/><circle cx="12" cy="16" r="0.6" fill="currentColor"/></svg>`,
+
+  // Relógio arredondado (Tempo de preparo)
+  relogio: `<svg ${SVG_BASE}><circle cx="12" cy="12" r="8"/><path d="M12 8V12L14.8 14"/></svg>`,
+
+  // Seta esquerda arredondada (Voltar)
+  voltar: `<svg ${SVG_BASE}><path d="M19 12H5.5"/><path d="M10.5 7L5.5 12L10.5 17"/></svg>`
 });
 
 // Preenche automaticamente qualquer elemento HTML com atributo data-icone="nome"

@@ -1,5 +1,5 @@
 // =========================================================
-// MINHA CASA, MINHA DESPENSA - LÓGICA PRINCIPAL (FASE 5)
+// MINHA CASA, MINHA DESPENSA - LÓGICA PRINCIPAL (FASE 6)
 // =========================================================
 import { auth, db } from "./firebase-config.js";
 import {
@@ -28,8 +28,12 @@ import { calcularFracaoEmbalagem } from "./conversor-medidas.js";
 
 // Estado global sincronizado em tempo real
 let listaProdutosDespensa = [];
+let listaReceitas = [];
+let receitaAbertaId = null;
+
 let cancelarEscutaDespensa = null;
 let cancelarEscutaRetiradas = null;
+let cancelarEscutaReceitas = null;
 let filtroGrupoAtual = "Todos";
 
 const telaLogin = document.getElementById("tela-login");
@@ -78,6 +82,17 @@ function mostrarMensagemRetirada(texto, tipo = "sucesso") {
   }`;
   box.classList.remove("oculto");
   setTimeout(() => box.classList.add("oculto"), 5000);
+}
+
+function mostrarMensagemReceitas(texto, tipo = "sucesso") {
+  const box = document.getElementById("receitas-mensagem");
+  if (!box) return;
+  box.textContent = texto;
+  box.className = `mensagem-feedback ${
+    tipo === "erro" ? "mensagem-erro" : "mensagem-sucesso"
+  }`;
+  box.classList.remove("oculto");
+  setTimeout(() => box.classList.add("oculto"), 4500);
 }
 
 // =========================================================
@@ -289,7 +304,7 @@ function configurarFormularioDespensa() {
 }
 
 // =========================================================
-// 4. TELA DEDICADA DE RETIRADA / BAIXA NO ESTOQUE (FASE 5)
+// 4. TELA DEDICADA DE RETIRADA / BAIXA NO ESTOQUE
 // =========================================================
 function preencherUnidadesRetirada() {
   const selectUnidade = document.getElementById("retirada-unidade");
@@ -305,8 +320,6 @@ function atualizarListaProdutosRetirada() {
   if (!selectProduto) return;
 
   const selecionadoAnterior = selectProduto.value;
-
-  // Filtra estritamente apenas produtos com saldo maior que zero (> 0)
   const disponiveis = listaProdutosDespensa.filter(
     (p) => Number(p.quantidadeAtual) > 0
   );
@@ -439,14 +452,12 @@ function configurarFormularioRetirada() {
     const usuarioEmail = auth.currentUser ? auth.currentUser.email : "familiar";
 
     try {
-      // 1. Atualiza o estoque na coleção 'despensa'
       await updateDoc(doc(db, "despensa", produto.id), {
         quantidadeAtual: novoSaldo,
         atualizadoPor: usuarioEmail,
         atualizadoEm: serverTimestamp()
       });
 
-      // 2. Grava o histórico na coleção 'retiradas'
       await addDoc(collection(db, "retiradas"), {
         produtoId: produto.id,
         produtoNome: produto.nome,
@@ -533,7 +544,414 @@ function iniciarEscutaHistoricoRetiradas() {
 }
 
 // =========================================================
-// 5. RENDERIZAÇÃO EM TEMPO REAL (TELA INICIAL E DESPENSA)
+// 5. RECEITAS INTELIGENTES COM VERIFICAÇÃO DE ESTOQUE (FASE 6)
+// =========================================================
+function obterMedidasUniversaisReceita() {
+  // Retorna as 8 medidas universais (xícara, colher de sopa, colher de chá, g, kg, ml, L, unidade)
+  return MEDIDAS_FIXAS.unidadesRetiradaReceita.filter((u) => u.id !== "pacote");
+}
+
+function nomeAmigavelUnidade(unidadeId) {
+  const encontrada = MEDIDAS_FIXAS.unidadesRetiradaReceita.find((u) => u.id === unidadeId);
+  return encontrada ? encontrada.nome.split(" (")[0] : unidadeId;
+}
+
+// Verifica em tempo real cada ingrediente da receita contra a despensa atual
+function avaliarDisponibilidadeReceita(receita) {
+  const ingredientesAvaliados = (receita.ingredientes || []).map((ing) => {
+    const produto = listaProdutosDespensa.find((p) => p.id === ing.produtoId);
+    const nomeExibicao = produto ? produto.nome : ing.produtoNome || "Item removido";
+    const unidadeLabel = nomeAmigavelUnidade(ing.unidadeId);
+
+    if (!produto) {
+      return {
+        ...ing,
+        nomeExibicao,
+        unidadeLabel,
+        disponivel: false,
+        motivoFalta: `${nomeExibicao} (${formatarNumero(ing.quantidade)} ${unidadeLabel}) — não cadastrado na despensa`
+      };
+    }
+
+    const saldoAtual = Number(produto.quantidadeAtual) || 0;
+    const conversao = calcularFracaoEmbalagem(produto, ing.quantidade, ing.unidadeId);
+
+    if (!conversao.valido) {
+      return {
+        ...ing,
+        nomeExibicao,
+        unidadeLabel,
+        disponivel: false,
+        motivoFalta: `${nomeExibicao} — medida incompatível com o cadastro (${produto.unidadeEmbalagem})`
+      };
+    }
+
+    // Margem mínima de 0.0005 para evitar falhas de arredondamento decimal (ex: 1/6 * 6)
+    const temSuficiente = saldoAtual + 0.0005 >= conversao.fracaoPacote;
+
+    if (!temSuficiente) {
+      const textoSaldo =
+        saldoAtual <= 0
+          ? "zerado na despensa"
+          : `você tem ${formatarNumero(saldoAtual)} emb., mas precisa de ${formatarNumero(conversao.fracaoPacote)} emb.`;
+
+      return {
+        ...ing,
+        nomeExibicao,
+        unidadeLabel,
+        disponivel: false,
+        motivoFalta: `${nomeExibicao} (${formatarNumero(ing.quantidade)} ${unidadeLabel}) — ${textoSaldo}`
+      };
+    }
+
+    return {
+      ...ing,
+      nomeExibicao,
+      unidadeLabel,
+      disponivel: true,
+      fracaoNecessaria: conversao.fracaoPacote
+    };
+  });
+
+  const faltantes = ingredientesAvaliados.filter((i) => !i.disponivel);
+
+  return {
+    tudoDisponivel: faltantes.length === 0 && ingredientesAvaliados.length > 0,
+    ingredientesAvaliados,
+    faltantes
+  };
+}
+
+function adicionarLinhaIngredienteForm(dadosIngrediente = null) {
+  const container = document.getElementById("lista-inputs-ingredientes");
+  if (!container) return;
+
+  const opcoesProdutos =
+    listaProdutosDespensa.length > 0
+      ? listaProdutosDespensa
+          .map((p) => `<option value="${p.id}">${p.nome} (${p.unidadeEmbalagem})</option>`)
+          .join("")
+      : `<option value="">Cadastre produtos na Despensa primeiro</option>`;
+
+  const opcoesMedidas = obterMedidasUniversaisReceita()
+    .map((m) => `<option value="${m.id}">${m.nome}</option>`)
+    .join("");
+
+  const linha = document.createElement("div");
+  linha.className = "linha-ingrediente-input";
+  linha.innerHTML = `
+    <select class="ing-select-produto" required>${opcoesProdutos}</select>
+    <input type="number" class="ing-input-qtd" step="0.01" min="0.01" placeholder="Qtd" required>
+    <select class="ing-select-unidade" required>${opcoesMedidas}</select>
+    <button type="button" class="btn-remover-linha" title="Remover ingrediente">✕</button>
+  `;
+
+  if (dadosIngrediente) {
+    linha.querySelector(".ing-select-produto").value = dadosIngrediente.produtoId || "";
+    linha.querySelector(".ing-input-qtd").value = dadosIngrediente.quantidade || "";
+    linha.querySelector(".ing-select-unidade").value = dadosIngrediente.unidadeId || "xicara";
+  }
+
+  linha.querySelector(".btn-remover-linha").addEventListener("click", () => {
+    if (container.children.length > 1) {
+      linha.remove();
+    } else {
+      mostrarMensagemReceitas("A receita precisa ter pelo menos 1 ingrediente.", "erro");
+    }
+  });
+
+  container.appendChild(linha);
+}
+
+function abrirFormularioReceita(receitaParaEditar = null) {
+  const painelForm = document.getElementById("painel-form-receita");
+  const painelDetalhe = document.getElementById("painel-detalhe-receita");
+  const visaoLista = document.getElementById("visao-lista-receitas");
+  const containerInputs = document.getElementById("lista-inputs-ingredientes");
+
+  painelDetalhe.classList.add("oculto");
+  visaoLista.classList.add("oculto");
+  receitaAbertaId = null;
+
+  containerInputs.innerHTML = "";
+
+  if (receitaParaEditar) {
+    document.getElementById("titulo-form-receita").textContent = `Editar Receita: ${receitaParaEditar.nome}`;
+    document.getElementById("receita-id-edicao").value = receitaParaEditar.id;
+    document.getElementById("rec-nome").value = receitaParaEditar.nome;
+    document.getElementById("rec-tipo").value = receitaParaEditar.tipoRefeicao;
+    document.getElementById("rec-tempo").value = receitaParaEditar.tempoPreparo;
+    document.getElementById("rec-modo").value = receitaParaEditar.modoPreparo;
+
+    (receitaParaEditar.ingredientes || []).forEach((ing) => {
+      adicionarLinhaIngredienteForm(ing);
+    });
+  } else {
+    document.getElementById("titulo-form-receita").textContent = "Nova Receita";
+    document.getElementById("receita-id-edicao").value = "";
+    document.getElementById("form-receita").reset();
+    adicionarLinhaIngredienteForm(null);
+  }
+
+  painelForm.classList.remove("oculto");
+  painelForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function fecharFormularioReceita() {
+  document.getElementById("painel-form-receita").classList.add("oculto");
+  document.getElementById("visao-lista-receitas").classList.remove("oculto");
+  document.getElementById("form-receita").reset();
+  document.getElementById("receita-id-edicao").value = "";
+}
+
+function abrirDetalheReceita(receitaId) {
+  receitaAbertaId = receitaId;
+  document.getElementById("painel-form-receita").classList.add("oculto");
+  document.getElementById("visao-lista-receitas").classList.add("oculto");
+  document.getElementById("painel-detalhe-receita").classList.remove("oculto");
+  renderizarDetalheReceita();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function fecharDetalheReceita() {
+  receitaAbertaId = null;
+  document.getElementById("painel-detalhe-receita").classList.add("oculto");
+  document.getElementById("visao-lista-receitas").classList.remove("oculto");
+}
+
+function renderizarDetalheReceita() {
+  if (!receitaAbertaId) return;
+
+  const receita = listaReceitas.find((r) => r.id === receitaAbertaId);
+  if (!receita) {
+    fecharDetalheReceita();
+    return;
+  }
+
+  const avaliacao = avaliarDisponibilidadeReceita(receita);
+  const boxSelo = document.getElementById("selo-disponibilidade-receita");
+
+  if (avaliacao.tudoDisponivel) {
+    boxSelo.className = "selo-receita-status selo-receita-verde";
+    boxSelo.textContent = "✅ Você possui todos os ingredientes na despensa!";
+  } else {
+    const itensFaltantesHtml = avaliacao.faltantes
+      .map((f) => `<li>${f.motivoFalta}</li>`)
+      .join("");
+
+    boxSelo.className = "selo-receita-status selo-receita-vermelho";
+    boxSelo.innerHTML = `
+      <strong>❌ Faltam ingredientes para esta receita</strong>
+      <ul class="lista-faltantes-selo">${itensFaltantesHtml}</ul>
+    `;
+  }
+
+  document.getElementById("detalhe-rec-tipo").textContent = receita.tipoRefeicao;
+  document.getElementById("detalhe-rec-tempo").innerHTML = `${ICONES.relogio} ${receita.tempoPreparo}`;
+  document.getElementById("detalhe-rec-nome").textContent = receita.nome;
+  document.getElementById("detalhe-rec-modo").textContent = receita.modoPreparo;
+
+  const containerIng = document.getElementById("detalhe-rec-ingredientes");
+  containerIng.innerHTML = avaliacao.ingredientesAvaliados
+    .map(
+      (ing) => `
+        <div class="item-ingrediente-detalhe ${ing.disponivel ? "" : "ing-faltando"}">
+          <div>
+            <div class="ing-nome-qtd">
+              ${ing.disponivel ? "✅" : "❌"} ${formatarNumero(ing.quantidade)} ${ing.unidadeLabel} de ${ing.nomeExibicao}
+            </div>
+            <div class="ing-status-subtexto">
+              ${ing.disponivel ? "Disponível na despensa" : ing.motivoFalta}
+            </div>
+          </div>
+        </div>
+      `
+    )
+    .join("");
+}
+
+function renderizarListaReceitas() {
+  const container = document.getElementById("lista-cards-receitas");
+  if (!container) return;
+
+  const termoBusca = (document.getElementById("busca-receitas")?.value || "").toLowerCase().trim();
+
+  const filtradas = listaReceitas.filter(
+    (r) =>
+      r.nome.toLowerCase().includes(termoBusca) ||
+      (r.tipoRefeicao || "").toLowerCase().includes(termoBusca)
+  );
+
+  if (filtradas.length === 0) {
+    container.innerHTML = `<p class="estado-vazio">Nenhuma receita encontrada. Clique em "+ Nova Receita" acima para cadastrar a primeira!</p>`;
+    return;
+  }
+
+  container.innerHTML = filtradas
+    .map((receita) => {
+      const avaliacao = avaliarDisponibilidadeReceita(receita);
+      const qtdIng = (receita.ingredientes || []).length;
+      const seloMini = avaliacao.tudoDisponivel
+        ? `<span class="selo-mini-disponivel selo-mini-verde">✅ Tem tudo</span>`
+        : `<span class="selo-mini-disponivel selo-mini-vermelho">❌ Falta ${avaliacao.faltantes.length}</span>`;
+
+      return `
+        <article class="card-receita-item" data-receita-id="${receita.id}">
+          <div>
+            <div class="card-receita-titulo">${receita.nome}</div>
+            <div class="card-receita-meta">
+              <span class="tag-pastel-mini badge-lavanda-mini">${receita.tipoRefeicao}</span>
+              <span>⏱ ${receita.tempoPreparo}</span>
+              <span>• ${qtdIng} ${qtdIng === 1 ? "ingrediente" : "ingredientes"}</span>
+            </div>
+          </div>
+          ${seloMini}
+        </article>
+      `;
+    })
+    .join("");
+
+  container.querySelectorAll("[data-receita-id]").forEach((card) => {
+    card.addEventListener("click", () => {
+      abrirDetalheReceita(card.dataset.receitaId);
+    });
+  });
+}
+
+function configurarModuloReceitas() {
+  document.getElementById("btn-abrir-form-receita").addEventListener("click", () => {
+    if (listaProdutosDespensa.length === 0) {
+      mostrarMensagemReceitas(
+        "Cadastre primeiro os produtos na aba Despensa para poder vinculá-los aos ingredientes da receita.",
+        "erro"
+      );
+      return;
+    }
+    abrirFormularioReceita(null);
+  });
+
+  document.getElementById("btn-fechar-form-receita").addEventListener("click", fecharFormularioReceita);
+  document.getElementById("btn-cancelar-receita").addEventListener("click", fecharFormularioReceita);
+  document.getElementById("btn-voltar-receitas").addEventListener("click", fecharDetalheReceita);
+
+  document.getElementById("btn-adicionar-ingrediente-form").addEventListener("click", () => {
+    adicionarLinhaIngredienteForm(null);
+  });
+
+  document.getElementById("busca-receitas").addEventListener("input", renderizarListaReceitas);
+
+  // Editar receita aberta
+  document.getElementById("btn-editar-receita-aberta").addEventListener("click", () => {
+    const receita = listaReceitas.find((r) => r.id === receitaAbertaId);
+    if (receita) abrirFormularioReceita(receita);
+  });
+
+  // Excluir receita aberta
+  document.getElementById("btn-excluir-receita-aberta").addEventListener("click", async () => {
+    const receita = listaReceitas.find((r) => r.id === receitaAbertaId);
+    if (!receita) return;
+
+    const confirmou = window.confirm(`Deseja realmente excluir a receita "${receita.nome}"?`);
+    if (confirmou) {
+      try {
+        await deleteDoc(doc(db, "receitas", receita.id));
+        fecharDetalheReceita();
+        mostrarMensagemReceitas(`Receita "${receita.nome}" excluída.`);
+      } catch (erro) {
+        console.error("Erro ao excluir receita:", erro);
+        mostrarMensagemReceitas("Não foi possível excluir a receita.", "erro");
+      }
+    }
+  });
+
+  // Salvar receita nova ou edição
+  document.getElementById("form-receita").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const linhas = document.querySelectorAll("#lista-inputs-ingredientes .linha-ingrediente-input");
+    const ingredientes = [];
+
+    linhas.forEach((linha) => {
+      const produtoId = linha.querySelector(".ing-select-produto").value;
+      const quantidade = parseFloat(linha.querySelector(".ing-input-qtd").value);
+      const unidadeId = linha.querySelector(".ing-select-unidade").value;
+      const prodObj = listaProdutosDespensa.find((p) => p.id === produtoId);
+
+      if (produtoId && !isNaN(quantidade) && quantidade > 0) {
+        ingredientes.push({
+          produtoId,
+          produtoNome: prodObj ? prodObj.nome : "Produto",
+          quantidade,
+          unidadeId
+        });
+      }
+    });
+
+    if (ingredientes.length === 0) {
+      mostrarMensagemReceitas("Adicione pelo menos um ingrediente válido.", "erro");
+      return;
+    }
+
+    const btnSalvar = document.getElementById("btn-salvar-receita");
+    btnSalvar.disabled = true;
+    btnSalvar.textContent = "Salvando...";
+
+    const idEdicao = document.getElementById("receita-id-edicao").value;
+    const dadosReceita = {
+      nome: document.getElementById("rec-nome").value.trim(),
+      tipoRefeicao: document.getElementById("rec-tipo").value,
+      tempoPreparo: document.getElementById("rec-tempo").value.trim(),
+      ingredientes,
+      modoPreparo: document.getElementById("rec-modo").value.trim(),
+      atualizadoPor: auth.currentUser ? auth.currentUser.email : "familiar",
+      atualizadoEm: serverTimestamp()
+    };
+
+    try {
+      if (idEdicao) {
+        await updateDoc(doc(db, "receitas", idEdicao), dadosReceita);
+        mostrarMensagemReceitas(`Receita "${dadosReceita.nome}" atualizada!`);
+      } else {
+        await addDoc(collection(db, "receitas"), dadosReceita);
+        mostrarMensagemReceitas(`Receita "${dadosReceita.nome}" cadastrada!`);
+      }
+      fecharFormularioReceita();
+    } catch (erro) {
+      console.error("Erro ao salvar receita:", erro);
+      mostrarMensagemReceitas("Erro ao salvar receita. Verifique sua conexão.", "erro");
+    } finally {
+      btnSalvar.disabled = false;
+      btnSalvar.textContent = "Salvar Receita";
+    }
+  });
+}
+
+function iniciarEscutaReceitas() {
+  if (cancelarEscutaReceitas) cancelarEscutaReceitas();
+
+  const consultaReceitas = query(collection(db, "receitas"), orderBy("nome", "asc"));
+
+  cancelarEscutaReceitas = onSnapshot(
+    consultaReceitas,
+    (snapshot) => {
+      listaReceitas = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      }));
+
+      renderizarListaReceitas();
+      if (receitaAbertaId) {
+        renderizarDetalheReceita();
+      }
+    },
+    (erro) => {
+      console.error("Erro ao sincronizar receitas:", erro);
+    }
+  );
+}
+
+// =========================================================
+// 6. RENDERIZAÇÃO EM TEMPO REAL (TELA INICIAL E DESPENSA)
 // =========================================================
 function obterStatusEstoque(produto) {
   const atual = Number(produto.quantidadeAtual) || 0;
@@ -698,6 +1116,10 @@ function iniciarEscutaTempoRealDespensa() {
       renderizarResumoVivoInicio();
       renderizarListaGerenciarDespensa();
       atualizarListaProdutosRetirada();
+      renderizarListaReceitas();
+      if (receitaAbertaId) {
+        renderizarDetalheReceita();
+      }
     },
     (erro) => {
       console.error("Erro na sincronização em tempo real:", erro);
@@ -706,7 +1128,7 @@ function iniciarEscutaTempoRealDespensa() {
 }
 
 // =========================================================
-// 6. AUTENTICAÇÃO E VERIFICAÇÃO DE ACESSO DA FAMÍLIA
+// 7. AUTENTICAÇÃO E VERIFICAÇÃO DE ACESSO DA FAMÍLIA
 // =========================================================
 async function verificarPermissaoFamiliar() {
   try {
@@ -783,6 +1205,10 @@ function configurarEventosLogin() {
       cancelarEscutaRetiradas();
       cancelarEscutaRetiradas = null;
     }
+    if (cancelarEscutaReceitas) {
+      cancelarEscutaReceitas();
+      cancelarEscutaReceitas = null;
+    }
     await signOut(auth);
   });
 }
@@ -809,6 +1235,7 @@ onAuthStateChanged(auth, async (user) => {
 
     iniciarEscutaTempoRealDespensa();
     iniciarEscutaHistoricoRetiradas();
+    iniciarEscutaReceitas();
   } else {
     telaLogin.classList.remove("oculto");
     appShell.classList.add("oculto");
@@ -824,6 +1251,7 @@ document.addEventListener("DOMContentLoaded", () => {
   configurarEventosLogin();
   configurarFormularioDespensa();
   configurarFormularioRetirada();
+  configurarModuloReceitas();
 
   document.querySelectorAll(".nav-item").forEach((botao) => {
     botao.addEventListener("click", () => navegarPara(botao.dataset.tela));
