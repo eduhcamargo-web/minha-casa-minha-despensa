@@ -1,0 +1,101 @@
+/* =========================================================
+   SISTEMA DE DESIGN - PALETA PASTEL MINIMALISTA
+   ========================================================= */
+:root {
+  /* Fundos suaves */
+  --bg-principal: #FAF8F5;      /* Creme muito suave (fundo geral) */
+  --bg-cartao: #FFFFFF;         /* Branco puro para cartões */
+  --bg-secundario: #F1EFEA;     /* Bege pastel para campos e divisões */
+
+  /* Cores Pastéis Temáticas */
+  --pastel-verde: #D8EDE3;      /* Verde menta suave (Mantimentos / Sucesso) */
+  --pastel-verde-escuro: #3D6B58;
+  --pastel-azul: #DCEAF7;       /* Azul sereno (Limpeza / Seleção) */
+  --pastel-azul-escuro: #385E82;
+  --pastel-lavanda: #EAE2F8;    /* Lavanda suave (Receitas) */
+  --pastel-lavanda-escuro: #5A457A;
+  --pastel-pessego: #FCE6D8;    /* Pêssego pastel (Lista de Compras) */
+  --pastel-pessego-escuro: #8A4F32;
+  --pastel-amarelo: #FDF3D0;    /* Amarelo manteiga (Ajuda / Destaques) */
+  --pastel-amarelo-escuro: #7A6321;
+
+  /* Cores de Alerta e Status */
+  --alerta-laranja-bg: #FFE8D1;
+  --alerta-laranja-texto: #9C4E00;
+  --alerta-vermelho-bg: #FADBD8;
+  --alerta-vermelho-texto: #922B21;
+
+  /* Tipografia e Bordas */
+  --texto-principal: #2F363D;
+  --texto-suave: #68737D;
+  --borda-suave: #E4E0D8;
+  --sombra-cartao: 0 4px 14px rgba(47, 54, 61, 0.05);
+  --raio-borda: 16px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-principal);
+  color: var(--texto-principal);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.setup-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.setup-card {
+  background-color: var(--bg-cartao);
+  border: 1px solid var(--borda-suave);
+  border-radius: var(--raio-borda);
+  box-shadow: var(--sombra-cartao);
+  max-width: 480px;
+  width: 100%;
+  padding: 28px;
+  text-align: center;
+}
+
+.setup-badge {
+  display: inline-block;
+  background-color: var(--pastel-verde);
+  color: var(--pastel-verde-escuro);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 999px;
+  margin-bottom: 14px;
+}
+
+.setup-card h1 {
+  font-size: 1.45rem;
+  margin-bottom: 8px;
+}
+
+.setup-subtitle {
+  color: var(--texto-suave);
+  font-size: 0.95rem;
+  margin-bottom: 22px;
+}
+
+.status-list {
+  list-style: none;
+  text-align: left;
+  background-color: var(--bg-secundario);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.92rem;
+}

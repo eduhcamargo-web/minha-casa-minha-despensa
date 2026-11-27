@@ -1,0 +1,18 @@
+{
+  "name": "Minha Casa, Minha Despensa",
+  "short_name": "Minha Despensa",
+  "description": "Gestão doméstica familiar de despensa, receitas e lista de compras.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#FAF8F5",
+  "theme_color": "#8FB9AA",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='110' fill='%238FB9AA'/><text x='256' y='340' font-size='270' text-anchor='middle'>🏠</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
