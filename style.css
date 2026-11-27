@@ -836,3 +836,87 @@ body {
   background-color: var(--pastel-verde);
   color: var(--pastel-verde-icone);
 }
+
+/* =========================================================
+   TELA DEDICADA DE RETIRADA E PRÉVIA DE CONVERSÃO (FASE 5)
+   ========================================================= */
+.tag-pastel-mini {
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.badge-pessego-mini {
+  background-color: var(--pastel-pessego);
+  color: var(--pastel-pessego-icone);
+}
+
+.campos-dinamicos-retirada {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding-top: 6px;
+  animation: aparecerSuave 0.2s ease;
+}
+
+.caixa-info-produto-retirada {
+  background-color: var(--pastel-azul);
+  color: var(--pastel-azul-icone);
+  border-radius: 14px;
+  padding: 12px 15px;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.caixa-preview-conversao {
+  border-radius: 14px;
+  padding: 13px 15px;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.preview-valido {
+  background-color: var(--pastel-verde);
+  color: var(--pastel-verde-icone);
+  border: 1px solid #C3E6C6;
+}
+
+.preview-invalido {
+  background-color: var(--alerta-laranja-bg);
+  color: var(--alerta-laranja-texto);
+  border: 1px solid var(--alerta-laranja-borda);
+}
+
+.card-historico-retirada {
+  background-color: var(--bg-principal);
+  border: 1px solid var(--borda-suave);
+  border-radius: 15px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.historico-titulo {
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: var(--texto-principal);
+}
+
+.historico-meta {
+  font-size: 0.76rem;
+  color: var(--texto-suave);
+  margin-top: 2px;
+}
+
+.pilula-baixa {
+  background-color: var(--pastel-pessego);
+  color: var(--pastel-pessego-icone);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 10px;
+  white-space: nowrap;
+}

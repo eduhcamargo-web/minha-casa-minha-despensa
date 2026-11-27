@@ -1,5 +1,5 @@
 // =========================================================
-// MINHA CASA, MINHA DESPENSA - LÓGICA PRINCIPAL (FASE 4)
+// MINHA CASA, MINHA DESPENSA - LÓGICA PRINCIPAL (FASE 5)
 // =========================================================
 import { auth, db } from "./firebase-config.js";
 import {
@@ -24,10 +24,12 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { CATEGORIAS_FIXAS, MEDIDAS_FIXAS, INSTRUCOES_AJUDA } from "./dados-fixos.js";
 import { ICONES, inserirIconesNaPagina } from "./icones.js";
+import { calcularFracaoEmbalagem } from "./conversor-medidas.js";
 
-// Estado global da despensa sincronizado em tempo real
+// Estado global sincronizado em tempo real
 let listaProdutosDespensa = [];
 let cancelarEscutaDespensa = null;
+let cancelarEscutaRetiradas = null;
 let filtroGrupoAtual = "Todos";
 
 const telaLogin = document.getElementById("tela-login");
@@ -38,7 +40,9 @@ const usuarioLogadoEmail = document.getElementById("usuario-logado-email");
 // Formata números decimais de forma limpa (ex: 1.50 -> 1,5 | 2.00 -> 2)
 function formatarNumero(valor) {
   const num = Number(valor) || 0;
-  return Number.isInteger(num) ? num.toString() : num.toFixed(2).replace(".", ",").replace(/0$/, "");
+  return Number.isInteger(num)
+    ? num.toString()
+    : num.toFixed(2).replace(".", ",").replace(/0$/, "");
 }
 
 function mostrarMensagemLogin(texto, tipo = "erro") {
@@ -63,6 +67,17 @@ function mostrarMensagemDespensa(texto, tipo = "sucesso") {
   }`;
   box.classList.remove("oculto");
   setTimeout(() => box.classList.add("oculto"), 4500);
+}
+
+function mostrarMensagemRetirada(texto, tipo = "sucesso") {
+  const box = document.getElementById("retirada-mensagem");
+  if (!box) return;
+  box.textContent = texto;
+  box.className = `mensagem-feedback ${
+    tipo === "erro" ? "mensagem-erro" : "mensagem-sucesso"
+  }`;
+  box.classList.remove("oculto");
+  setTimeout(() => box.classList.add("oculto"), 5000);
 }
 
 // =========================================================
@@ -203,12 +218,10 @@ function configurarFormularioDespensa() {
   atualizarOpcoesSubcategoria("Mantimentos");
   preencherOpcoesUnidadesEmbalagem();
 
-  // Filtra subcategorias automaticamente ao trocar Mantimentos <-> Limpeza
   selectGrupo.addEventListener("change", () => {
     atualizarOpcoesSubcategoria(selectGrupo.value);
   });
 
-  // Mostra/esconde o campo extra de rendimento em xícaras
   checkXicaras.addEventListener("change", () => {
     if (checkXicaras.checked) {
       grupoXicaras.classList.remove("oculto");
@@ -221,7 +234,6 @@ function configurarFormularioDespensa() {
     }
   });
 
-  // Botões de abrir e fechar formulário
   document.getElementById("btn-abrir-form-produto").addEventListener("click", () => {
     abrirFormularioProduto(null);
   });
@@ -229,13 +241,11 @@ function configurarFormularioDespensa() {
   document.getElementById("btn-fechar-form-produto").addEventListener("click", fecharFormularioProduto);
   document.getElementById("btn-cancelar-produto").addEventListener("click", fecharFormularioProduto);
 
-  // Atalho "Cadastrar Produto" da Tela Inicial abre a Despensa já com o formulário aberto
   document.getElementById("atalho-cadastrar-produto").addEventListener("click", () => {
     navegarPara("despensa");
     abrirFormularioProduto(null);
   });
 
-  // Salvar Produto Novo ou Edição no Firestore
   formProduto.addEventListener("submit", async (e) => {
     e.preventDefault();
     const btnSalvar = document.getElementById("btn-salvar-produto");
@@ -279,17 +289,267 @@ function configurarFormularioDespensa() {
 }
 
 // =========================================================
-// 4. RENDERIZAÇÃO EM TEMPO REAL (TELA INICIAL E DESPENSA)
+// 4. TELA DEDICADA DE RETIRADA / BAIXA NO ESTOQUE (FASE 5)
+// =========================================================
+function preencherUnidadesRetirada() {
+  const selectUnidade = document.getElementById("retirada-unidade");
+  if (!selectUnidade) return;
+
+  selectUnidade.innerHTML = MEDIDAS_FIXAS.unidadesRetiradaReceita
+    .map((u) => `<option value="${u.id}">${u.nome}</option>`)
+    .join("");
+}
+
+function atualizarListaProdutosRetirada() {
+  const selectProduto = document.getElementById("retirada-produto");
+  if (!selectProduto) return;
+
+  const selecionadoAnterior = selectProduto.value;
+
+  // Filtra estritamente apenas produtos com saldo maior que zero (> 0)
+  const disponiveis = listaProdutosDespensa.filter(
+    (p) => Number(p.quantidadeAtual) > 0
+  );
+
+  if (disponiveis.length === 0) {
+    selectProduto.innerHTML = `<option value="">Nenhum produto com saldo disponível na despensa</option>`;
+    document.getElementById("grupo-campos-retirada").classList.add("oculto");
+    return;
+  }
+
+  selectProduto.innerHTML =
+    `<option value="">Selecione um produto (${disponiveis.length} disponíveis)...</option>` +
+    disponiveis
+      .map(
+        (p) =>
+          `<option value="${p.id}">${p.nome} — Saldo: ${formatarNumero(p.quantidadeAtual)} emb. (${formatarNumero(p.tamanhoEmbalagem)}${p.unidadeEmbalagem})</option>`
+      )
+      .join("");
+
+  if (selecionadoAnterior && disponiveis.some((p) => p.id === selecionadoAnterior)) {
+    selectProduto.value = selecionadoAnterior;
+    atualizarDetalhesProdutoRetirada();
+  } else {
+    document.getElementById("grupo-campos-retirada").classList.add("oculto");
+  }
+}
+
+function atualizarDetalhesProdutoRetirada() {
+  const selectProduto = document.getElementById("retirada-produto");
+  const grupoCampos = document.getElementById("grupo-campos-retirada");
+  const boxInfo = document.getElementById("info-saldo-selecionado");
+  const inputQtd = document.getElementById("retirada-quantidade");
+
+  const produto = listaProdutosDespensa.find((p) => p.id === selectProduto.value);
+
+  if (!produto) {
+    grupoCampos.classList.add("oculto");
+    inputQtd.required = false;
+    return;
+  }
+
+  grupoCampos.classList.remove("oculto");
+  inputQtd.required = true;
+
+  const textoXicaras =
+    produto.usaRendimentoXicaras && produto.xicarasPorEmbalagem
+      ? `<br><strong>Rendimento configurado:</strong> 1 embalagem rende ${formatarNumero(produto.xicarasPorEmbalagem)} xícaras.`
+      : "";
+
+  boxInfo.innerHTML = `
+    <strong>Saldo atual em casa:</strong> ${formatarNumero(produto.quantidadeAtual)} embalagem(ns) de ${formatarNumero(produto.tamanhoEmbalagem)} ${produto.unidadeEmbalagem}.${textoXicaras}
+  `;
+
+  atualizarPreviewConversaoRetirada();
+}
+
+function atualizarPreviewConversaoRetirada() {
+  const selectProduto = document.getElementById("retirada-produto");
+  const inputQtd = document.getElementById("retirada-quantidade");
+  const selectUnidade = document.getElementById("retirada-unidade");
+  const boxPreview = document.getElementById("preview-conversao-retirada");
+
+  const produto = listaProdutosDespensa.find((p) => p.id === selectProduto.value);
+  const qtd = parseFloat(inputQtd.value);
+
+  if (!produto || isNaN(qtd) || qtd <= 0) {
+    boxPreview.classList.add("oculto");
+    return;
+  }
+
+  const resultado = calcularFracaoEmbalagem(produto, qtd, selectUnidade.value);
+  boxPreview.classList.remove("oculto");
+
+  if (!resultado.valido) {
+    boxPreview.className = "caixa-preview-conversao preview-invalido";
+    boxPreview.textContent = resultado.mensagemErro;
+    return;
+  }
+
+  const saldoAtual = Number(produto.quantidadeAtual) || 0;
+  const novoSaldo = Math.max(0, Number((saldoAtual - resultado.fracaoPacote).toFixed(4)));
+  const avisoExcesso =
+    resultado.fracaoPacote > saldoAtual
+      ? " (Atenção: retirada maior que o saldo atual; o estoque ficará zerado)."
+      : "";
+
+  boxPreview.className = "caixa-preview-conversao preview-valido";
+  boxPreview.innerHTML = `
+    <strong>Cálculo automático:</strong> Esta retirada desconta <strong>${formatarNumero(resultado.fracaoPacote)}</strong> embalagem(ns).<br>
+    <strong>Novo saldo previsto:</strong> ${formatarNumero(novoSaldo)} embalagem(ns)${avisoExcesso}
+  `;
+}
+
+function configurarFormularioRetirada() {
+  const selectProduto = document.getElementById("retirada-produto");
+  const inputQtd = document.getElementById("retirada-quantidade");
+  const selectUnidade = document.getElementById("retirada-unidade");
+  const formRetirada = document.getElementById("form-retirada");
+
+  preencherUnidadesRetirada();
+
+  selectProduto.addEventListener("change", () => {
+    atualizarDetalhesProdutoRetirada();
+  });
+
+  inputQtd.addEventListener("input", atualizarPreviewConversaoRetirada);
+  selectUnidade.addEventListener("change", atualizarPreviewConversaoRetirada);
+
+  formRetirada.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const produto = listaProdutosDespensa.find((p) => p.id === selectProduto.value);
+    const qtd = parseFloat(inputQtd.value);
+    const unidadeId = selectUnidade.value;
+
+    if (!produto) return;
+
+    const resultado = calcularFracaoEmbalagem(produto, qtd, unidadeId);
+    if (!resultado.valido) {
+      mostrarMensagemRetirada(resultado.mensagemErro, "erro");
+      return;
+    }
+
+    const btnConfirmar = document.getElementById("btn-confirmar-retirada");
+    btnConfirmar.disabled = true;
+
+    const saldoAnterior = Number(produto.quantidadeAtual) || 0;
+    const novoSaldo = Math.max(0, Number((saldoAnterior - resultado.fracaoPacote).toFixed(4)));
+    const unidadeObj = MEDIDAS_FIXAS.unidadesRetiradaReceita.find((u) => u.id === unidadeId);
+    const usuarioEmail = auth.currentUser ? auth.currentUser.email : "familiar";
+
+    try {
+      // 1. Atualiza o estoque na coleção 'despensa'
+      await updateDoc(doc(db, "despensa", produto.id), {
+        quantidadeAtual: novoSaldo,
+        atualizadoPor: usuarioEmail,
+        atualizadoEm: serverTimestamp()
+      });
+
+      // 2. Grava o histórico na coleção 'retiradas'
+      await addDoc(collection(db, "retiradas"), {
+        produtoId: produto.id,
+        produtoNome: produto.nome,
+        grupo: produto.grupo,
+        categoria: produto.categoria,
+        quantidadeRetirada: qtd,
+        unidadeRetirada: unidadeId,
+        unidadeRetiradaNome: unidadeObj ? unidadeObj.nome : unidadeId,
+        fracaoPacoteDescontada: Number(resultado.fracaoPacote.toFixed(4)),
+        saldoAnterior: saldoAnterior,
+        saldoNovo: novoSaldo,
+        retiradoPor: usuarioEmail,
+        dataRetirada: serverTimestamp()
+      });
+
+      mostrarMensagemRetirada(
+        `Retirada registrada! "${produto.nome}" agora possui ${formatarNumero(novoSaldo)} embalagem(ns) em casa.`
+      );
+
+      formRetirada.reset();
+      document.getElementById("grupo-campos-retirada").classList.add("oculto");
+      document.getElementById("preview-conversao-retirada").classList.add("oculto");
+    } catch (erro) {
+      console.error("Erro ao registrar retirada:", erro);
+      mostrarMensagemRetirada("Erro ao registrar retirada. Tente novamente.", "erro");
+    } finally {
+      btnConfirmar.disabled = false;
+    }
+  });
+}
+
+function iniciarEscutaHistoricoRetiradas() {
+  if (cancelarEscutaRetiradas) cancelarEscutaRetiradas();
+
+  const consultaRetiradas = query(
+    collection(db, "retiradas"),
+    orderBy("dataRetirada", "desc"),
+    limit(15)
+  );
+
+  cancelarEscutaRetiradas = onSnapshot(
+    consultaRetiradas,
+    (snapshot) => {
+      const container = document.getElementById("lista-historico-retiradas");
+      if (!container) return;
+
+      if (snapshot.empty) {
+        container.innerHTML = `<p class="estado-vazio">Nenhuma retirada registrada ainda.</p>`;
+        return;
+      }
+
+      container.innerHTML = snapshot.docs
+        .map((docSnap) => {
+          const item = docSnap.data();
+          const dataFormatada = item.dataRetirada?.toDate
+            ? item.dataRetirada.toDate().toLocaleString("pt-BR", {
+                day: "2-digit",
+                month: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit"
+              })
+            : "Agora mesmo";
+
+          return `
+            <article class="card-historico-retirada">
+              <div>
+                <div class="historico-titulo">${item.produtoNome}</div>
+                <div class="historico-meta">
+                  Por ${item.retiradoPor} • ${dataFormatada} • Restou: ${formatarNumero(item.saldoNovo)} emb.
+                </div>
+              </div>
+              <span class="pilula-baixa">
+                -${formatarNumero(item.quantidadeRetirada)} ${item.unidadeRetirada}
+              </span>
+            </article>
+          `;
+        })
+        .join("");
+    },
+    (erro) => {
+      console.error("Erro ao carregar histórico de retiradas:", erro);
+    }
+  );
+}
+
+// =========================================================
+// 5. RENDERIZAÇÃO EM TEMPO REAL (TELA INICIAL E DESPENSA)
 // =========================================================
 function obterStatusEstoque(produto) {
   const atual = Number(produto.quantidadeAtual) || 0;
   const minimo = Number(produto.estoqueMinimo) || 0;
 
   if (atual <= 0) {
-    return { classeCard: "status-zerado", seloHtml: `<span class="tag-alerta-inline tag-alerta-vermelho">${ICONES.alertaTriangulo} Zerado</span>` };
+    return {
+      classeCard: "status-zerado",
+      seloHtml: `<span class="tag-alerta-inline tag-alerta-vermelho">${ICONES.alertaTriangulo} Zerado</span>`
+    };
   }
   if (atual <= minimo) {
-    return { classeCard: "status-baixo", seloHtml: `<span class="tag-alerta-inline tag-alerta-laranja">${ICONES.alertaTriangulo} Acabando</span>` };
+    return {
+      classeCard: "status-baixo",
+      seloHtml: `<span class="tag-alerta-inline tag-alerta-laranja">${ICONES.alertaTriangulo} Acabando</span>`
+    };
   }
   return { classeCard: "", seloHtml: "" };
 }
@@ -398,7 +658,6 @@ function renderizarListaGerenciarDespensa() {
 
   container.innerHTML = filtrados.map((p) => criarCardProdutoHtml(p, true)).join("");
 
-  // Eventos dos botões Editar e Excluir
   container.querySelectorAll("[data-acao]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = btn.dataset.id;
@@ -438,6 +697,7 @@ function iniciarEscutaTempoRealDespensa() {
 
       renderizarResumoVivoInicio();
       renderizarListaGerenciarDespensa();
+      atualizarListaProdutosRetirada();
     },
     (erro) => {
       console.error("Erro na sincronização em tempo real:", erro);
@@ -446,7 +706,7 @@ function iniciarEscutaTempoRealDespensa() {
 }
 
 // =========================================================
-// 5. AUTENTICAÇÃO E VERIFICAÇÃO DE ACESSO DA FAMÍLIA
+// 6. AUTENTICAÇÃO E VERIFICAÇÃO DE ACESSO DA FAMÍLIA
 // =========================================================
 async function verificarPermissaoFamiliar() {
   try {
@@ -519,6 +779,10 @@ function configurarEventosLogin() {
       cancelarEscutaDespensa();
       cancelarEscutaDespensa = null;
     }
+    if (cancelarEscutaRetiradas) {
+      cancelarEscutaRetiradas();
+      cancelarEscutaRetiradas = null;
+    }
     await signOut(auth);
   });
 }
@@ -543,8 +807,8 @@ onAuthStateChanged(auth, async (user) => {
     telaLogin.classList.add("oculto");
     appShell.classList.remove("oculto");
 
-    // Liga a sincronização em tempo real com o Firebase
     iniciarEscutaTempoRealDespensa();
+    iniciarEscutaHistoricoRetiradas();
   } else {
     telaLogin.classList.remove("oculto");
     appShell.classList.add("oculto");
@@ -559,8 +823,8 @@ document.addEventListener("DOMContentLoaded", () => {
   renderizarTelaAjuda();
   configurarEventosLogin();
   configurarFormularioDespensa();
+  configurarFormularioRetirada();
 
-  // Navegação inferior e atalhos
   document.querySelectorAll(".nav-item").forEach((botao) => {
     botao.addEventListener("click", () => navegarPara(botao.dataset.tela));
   });
@@ -569,7 +833,6 @@ document.addEventListener("DOMContentLoaded", () => {
     botao.addEventListener("click", () => navegarPara(botao.dataset.irPara));
   });
 
-  // Filtros e buscas em tempo real
   document.getElementById("busca-inicio").addEventListener("input", renderizarResumoVivoInicio);
   document.getElementById("busca-despensa").addEventListener("input", renderizarListaGerenciarDespensa);
 

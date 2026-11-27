@@ -81,7 +81,6 @@
            1. TELA INICIAL (INÍCIO) - MENU RÁPIDO + ESTOQUE VIVO
            ===================================================== -->
       <section id="tela-inicio" class="tela ativa">
-        <!-- Banner Destaque Verde-Sálvia com Contador ao Vivo -->
         <div class="banner-destaque-verde">
           <div class="banner-texto">
             <span class="banner-tag">#DespensaEmTempoReal</span>
@@ -93,7 +92,6 @@
           </div>
         </div>
 
-        <!-- Menu Rápido com Exatamente 6 Botões Intuitivos -->
         <div class="secao-topo-linha">
           <h3>Menu Rápido</h3>
           <span class="texto-auxiliar-topo">Atalhos do dia a dia</span>
@@ -126,13 +124,11 @@
           </button>
         </div>
 
-        <!-- Barra de Pesquisa Rápida no Estoque Vivo -->
         <div class="barra-busca-wrapper">
           <span class="busca-icone" data-icone="busca"></span>
           <input type="search" id="busca-inicio" placeholder="Buscar item na despensa (ex: arroz, detergente)...">
         </div>
 
-        <!-- Resumo Vivo: Bloco 1 - MANTIMENTOS -->
         <div class="bloco-estoque-vivo">
           <div class="bloco-estoque-cabecalho cabecalho-mantimentos">
             <div class="bloco-titulo-grupo">
@@ -146,7 +142,6 @@
           </div>
         </div>
 
-        <!-- Resumo Vivo: Bloco 2 - MATERIAL DE LIMPEZA -->
         <div class="bloco-estoque-vivo">
           <div class="bloco-estoque-cabecalho cabecalho-limpeza">
             <div class="bloco-titulo-grupo">
@@ -176,10 +171,8 @@
           </button>
         </div>
 
-        <!-- Mensagem de feedback ao salvar/editar/excluir -->
         <div id="despensa-mensagem" class="mensagem-feedback oculto" role="alert"></div>
 
-        <!-- Formulário de Cadastro / Edição de Produto -->
         <div id="painel-form-produto" class="cartao-formulario oculto">
           <div class="cartao-form-topo">
             <h3 id="titulo-form-produto">Novo Produto na Despensa</h3>
@@ -191,7 +184,6 @@
           <form id="form-produto" class="formulario-padrao">
             <input type="hidden" id="produto-id-edicao" value="">
 
-            <!-- Grupo Principal (Mantimentos ou Material de Limpeza) -->
             <div class="campo-grupo">
               <label for="prod-grupo">1. Grupo Principal *</label>
               <select id="prod-grupo" required>
@@ -201,21 +193,18 @@
               <small class="dica-campo">Define se o item aparecerá na seção de alimentos ou de limpeza.</small>
             </div>
 
-            <!-- Subcategoria Dependente -->
             <div class="campo-grupo">
               <label for="prod-categoria">2. Subcategoria *</label>
               <select id="prod-categoria" required></select>
               <small class="dica-campo">Opções filtradas automaticamente conforme o grupo escolhido acima.</small>
             </div>
 
-            <!-- Nome do Produto -->
             <div class="campo-grupo">
               <label for="prod-nome">3. Nome do Produto *</label>
               <input type="text" id="prod-nome" placeholder="Ex: Arroz Branco, Feijão Carioca, Detergente Neutro" required>
               <small class="dica-campo">Escreva o nome simples como a família procura no dia a dia.</small>
             </div>
 
-            <!-- Tamanho da Embalagem e Unidade -->
             <div class="grade-dois-campos">
               <div class="campo-grupo">
                 <label for="prod-tamanho">4. Tamanho do Pacote Fechado *</label>
@@ -230,7 +219,6 @@
               </div>
             </div>
 
-            <!-- Quantidade Atual e Estoque Mínimo -->
             <div class="grade-dois-campos">
               <div class="campo-grupo">
                 <label for="prod-quantidade">6. Quantidade Atual em Casa *</label>
@@ -245,7 +233,6 @@
               </div>
             </div>
 
-            <!-- Chave Condicional: Rendimento em Xícaras -->
             <div class="caixa-checkbox-pastel">
               <label class="checkbox-label" for="prod-usa-xicaras">
                 <input type="checkbox" id="prod-usa-xicaras">
@@ -255,7 +242,6 @@
                 </span>
               </label>
 
-              <!-- Campo extra liberado somente quando a caixa acima é marcada -->
               <div id="grupo-rendimento-xicaras" class="campo-condicional oculto">
                 <div class="campo-grupo">
                   <label for="prod-xicaras-por-embalagem">Quantas xícaras rende 1 pacote inteiro?</label>
@@ -272,7 +258,6 @@
           </form>
         </div>
 
-        <!-- Filtros e Busca na Tela de Despensa -->
         <div class="filtros-despensa-barra">
           <div class="abas-filtro">
             <button type="button" class="aba-filtro ativa" data-filtro-grupo="Todos">Todos</button>
@@ -286,27 +271,79 @@
           </div>
         </div>
 
-        <!-- Lista Completa de Gerenciamento (Editar / Excluir) -->
         <div id="lista-gerenciar-despensa" class="lista-cards-estoque">
           <p class="estado-vazio">Carregando produtos...</p>
         </div>
       </section>
 
       <!-- =====================================================
-           3. TELA DEDICADA DE RETIRADA
+           3. TELA DEDICADA DE RETIRADA / BAIXA NO ESTOQUE
            ===================================================== -->
       <section id="tela-retirada" class="tela">
         <div class="cabecalho-secao">
           <h2>Retirada de Item</h2>
-          <p>Dê baixa rápida no consumo diário</p>
+          <p>Dê baixa rápida no consumo diário sem precisar editar o produto</p>
         </div>
-        <div class="faixa-pastel faixa-pessego">
-          <div class="faixa-info">
-            <h3>Baixa Automática</h3>
-            <p>Na <strong>Fase 5</strong>, ativaremos aqui a seleção de produtos com saldo maior que zero e a conversão automática de colheres, xícaras, gramas e litros.</p>
+
+        <div id="retirada-mensagem" class="mensagem-feedback oculto" role="alert"></div>
+
+        <!-- Cartão do Formulário Exclusivo de Retirada -->
+        <div class="cartao-formulario">
+          <div class="cartao-form-topo">
+            <h3>Registrar Consumo / Saída</h3>
+            <span class="tag-pastel-mini badge-pessego-mini">Baixa Automática</span>
           </div>
-          <div class="faixa-emblema-branco">
-            <span class="icone-svg" data-icone="retirar"></span>
+
+          <form id="form-retirada" class="formulario-padrao">
+            <!-- Seleção apenas de produtos com saldo > 0 -->
+            <div class="campo-grupo">
+              <label for="retirada-produto">1. Produto da Despensa *</label>
+              <select id="retirada-produto" required>
+                <option value="">Selecione um produto disponível...</option>
+              </select>
+              <small class="dica-campo">Apenas itens com saldo maior que zero em casa aparecem nesta lista.</small>
+            </div>
+
+            <!-- Campos que surgem após selecionar o produto -->
+            <div id="grupo-campos-retirada" class="campos-dinamicos-retirada oculto">
+              <div id="info-saldo-selecionado" class="caixa-info-produto-retirada"></div>
+
+              <div class="grade-dois-campos">
+                <div class="campo-grupo">
+                  <label for="retirada-quantidade">2. Quantidade Retirada *</label>
+                  <input type="number" id="retirada-quantidade" step="0.01" min="0.01" placeholder="Ex: 2 ou 0.5">
+                  <small class="dica-campo">Quanto você usou agora (aceita números decimais).</small>
+                </div>
+
+                <div class="campo-grupo">
+                  <label for="retirada-unidade">3. Medida / Unidade *</label>
+                  <select id="retirada-unidade"></select>
+                  <small class="dica-campo">Escolha a unidade usada na receita ou na limpeza.</small>
+                </div>
+              </div>
+
+              <!-- Prévia matemática em tempo real antes de confirmar -->
+              <div id="preview-conversao-retirada" class="caixa-preview-conversao oculto"></div>
+
+              <button type="submit" id="btn-confirmar-retirada" class="btn btn-primario btn-bloco">
+                <span class="icone-svg-sm" data-icone="retirar"></span>
+                <span>Confirmar Retirada e Descontar</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Histórico Recente de Retiradas da Família -->
+        <div class="bloco-estoque-vivo">
+          <div class="bloco-estoque-cabecalho">
+            <div class="bloco-titulo-grupo">
+              <span class="bolinha-indicadora" style="background-color: var(--pastel-pessego-icone);"></span>
+              <h3>Últimas Retiradas da Família</h3>
+            </div>
+            <span class="contador-pilula badge-pessego-mini">Tempo Real</span>
+          </div>
+          <div id="lista-historico-retiradas" class="lista-cards-estoque">
+            <p class="estado-vazio">Nenhuma retirada registrada ainda.</p>
           </div>
         </div>
       </section>
