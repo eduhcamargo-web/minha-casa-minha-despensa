@@ -1,101 +1,601 @@
 /* =========================================================
-   SISTEMA DE DESIGN - PALETA PASTEL MINIMALISTA
+   SISTEMA DE DESIGN - INSPIRADO NAS REFERÊNCIAS VISUAIS
    ========================================================= */
 :root {
-  /* Fundos suaves */
-  --bg-principal: #FAF8F5;      /* Creme muito suave (fundo geral) */
-  --bg-cartao: #FFFFFF;         /* Branco puro para cartões */
-  --bg-secundario: #F1EFEA;     /* Bege pastel para campos e divisões */
+  /* Fundos limpos e suaves */
+  --bg-principal: #F8F9FA;
+  --bg-cartao: #FFFFFF;
+  --bg-campo: #F2F3F5;
 
-  /* Cores Pastéis Temáticas */
-  --pastel-verde: #D8EDE3;      /* Verde menta suave (Mantimentos / Sucesso) */
-  --pastel-verde-escuro: #3D6B58;
-  --pastel-azul: #DCEAF7;       /* Azul sereno (Limpeza / Seleção) */
-  --pastel-azul-escuro: #385E82;
-  --pastel-lavanda: #EAE2F8;    /* Lavanda suave (Receitas) */
-  --pastel-lavanda-escuro: #5A457A;
-  --pastel-pessego: #FCE6D8;    /* Pêssego pastel (Lista de Compras) */
-  --pastel-pessego-escuro: #8A4F32;
-  --pastel-amarelo: #FDF3D0;    /* Amarelo manteiga (Ajuda / Destaques) */
-  --pastel-amarelo-escuro: #7A6321;
+  /* Verde-Sálvia Principal (Destaque do cabeçalho e banner) */
+  --verde-destaque: #78B159;
+  --verde-destaque-escuro: #5E9142;
+
+  /* Paleta de Blocos Pastéis (Referência 1) */
+  --pastel-verde: #E3F5E4;
+  --pastel-verde-icone: #45854B;
+
+  --pastel-lavanda: #ECE8FA;
+  --pastel-lavanda-icone: #5D4A99;
+
+  --pastel-pessego: #FCE8DD;
+  --pastel-pessego-icone: #AD5B34;
+
+  --pastel-azul: #E2F0FC;
+  --pastel-azul-icone: #396B99;
+
+  --pastel-amarelo: #FDF2D0;
+  --pastel-amarelo-icone: #8E6E1A;
+
+  --pastel-rosa: #FADEE4;
+  --pastel-rosa-icone: #A1465A;
 
   /* Cores de Alerta e Status */
-  --alerta-laranja-bg: #FFE8D1;
+  --alerta-laranja-bg: #FFE7CC;
   --alerta-laranja-texto: #9C4E00;
   --alerta-vermelho-bg: #FADBD8;
   --alerta-vermelho-texto: #922B21;
 
   /* Tipografia e Bordas */
-  --texto-principal: #2F363D;
-  --texto-suave: #68737D;
-  --borda-suave: #E4E0D8;
-  --sombra-cartao: 0 4px 14px rgba(47, 54, 61, 0.05);
-  --raio-borda: 16px;
+  --texto-principal: #23272D;
+  --texto-suave: #757D8A;
+  --borda-suave: #ECEEF2;
+  --sombra-suave: 0 6px 20px rgba(35, 39, 45, 0.04);
+  --raio-cartao: 20px;
 }
 
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background-color: var(--bg-principal);
   color: var(--texto-principal);
-  line-height: 1.5;
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
 }
 
-.setup-container {
+.oculto {
+  display: none !important;
+}
+
+/* Tamanhos padrão para ícones SVG fluidos */
+.icone-svg svg { width: 22px; height: 22px; display: block; }
+.icone-svg-sm svg { width: 17px; height: 17px; display: block; }
+.icone-svg-lg svg { width: 32px; height: 32px; display: block; }
+
+/* =========================================================
+   TELA DE LOGIN
+   ========================================================= */
+.login-wrapper {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  background: linear-gradient(180deg, var(--pastel-verde) 0%, var(--bg-principal) 45%);
 }
 
-.setup-card {
+.login-card {
   background-color: var(--bg-cartao);
   border: 1px solid var(--borda-suave);
-  border-radius: var(--raio-borda);
-  box-shadow: var(--sombra-cartao);
-  max-width: 480px;
+  border-radius: 26px;
+  box-shadow: var(--sombra-suave);
+  max-width: 410px;
   width: 100%;
-  padding: 28px;
+  padding: 32px 26px;
   text-align: center;
 }
 
-.setup-badge {
-  display: inline-block;
+.login-icone {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 14px;
   background-color: var(--pastel-verde);
-  color: var(--pastel-verde-escuro);
-  font-size: 0.8rem;
+  color: var(--pastel-verde-icone);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-icone svg {
+  width: 32px;
+  height: 32px;
+}
+
+.login-card h1 {
+  font-size: 1.38rem;
   font-weight: 700;
-  padding: 4px 12px;
-  border-radius: 999px;
-  margin-bottom: 14px;
+  margin-bottom: 6px;
 }
 
-.setup-card h1 {
-  font-size: 1.45rem;
-  margin-bottom: 8px;
-}
-
-.setup-subtitle {
+.login-subtitulo {
   color: var(--texto-suave);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   margin-bottom: 22px;
 }
 
-.status-list {
-  list-style: none;
-  text-align: left;
-  background-color: var(--bg-secundario);
-  border-radius: 12px;
-  padding: 16px;
+/* =========================================================
+   FORMULÁRIOS E BOTÕES GLOBAIS
+   ========================================================= */
+.formulario-padrao {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  font-size: 0.92rem;
+  gap: 15px;
+  text-align: left;
+}
+
+.campo-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.campo-grupo label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--texto-principal);
+}
+
+.campo-grupo input,
+.campo-grupo select,
+.campo-grupo textarea {
+  width: 100%;
+  padding: 13px 15px;
+  font-size: 0.98rem;
+  color: var(--texto-principal);
+  background-color: var(--bg-campo);
+  border: 1px solid transparent;
+  border-radius: 14px;
+  outline: none;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.campo-grupo input:focus,
+.campo-grupo select:focus,
+.campo-grupo textarea:focus {
+  background-color: var(--bg-cartao);
+  border-color: var(--verde-destaque);
+}
+
+.dica-campo {
+  font-size: 0.76rem;
+  color: var(--texto-suave);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 18px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.2s, background-color 0.2s;
+}
+
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-bloco { width: 100%; }
+
+.btn-primario {
+  background-color: var(--verde-destaque);
+  color: #FFFFFF;
+}
+
+.btn-primario:hover:not(:disabled) {
+  background-color: var(--verde-destaque-escuro);
+}
+
+.btn-google {
+  background-color: var(--bg-cartao);
+  color: var(--texto-principal);
+  border: 1px solid var(--borda-suave);
+}
+
+.btn-google:hover:not(:disabled) {
+  background-color: var(--bg-campo);
+}
+
+.google-g {
+  font-weight: 800;
+  color: #4285F4;
+  font-size: 1.05rem;
+}
+
+.divisor-ou {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 18px 0;
+  color: var(--texto-suave);
+  font-size: 0.8rem;
+}
+
+.divisor-ou::before,
+.divisor-ou::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid var(--borda-suave);
+}
+
+.divisor-ou span { padding: 0 12px; }
+
+.mensagem-feedback {
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 0.86rem;
+  margin-bottom: 16px;
+  text-align: left;
+  font-weight: 500;
+}
+
+.mensagem-erro {
+  background-color: var(--alerta-vermelho-bg);
+  color: var(--alerta-vermelho-texto);
+}
+
+.mensagem-sucesso {
+  background-color: var(--pastel-verde);
+  color: var(--pastel-verde-icone);
+}
+
+/* =========================================================
+   CABEÇALHO E ESTRUTURA PRINCIPAL (INSPIRADO NA REFERÊNCIA 1)
+   ========================================================= */
+.app-shell {
+  min-height: 100vh;
+  padding-bottom: 92px;
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background-color: rgba(248, 249, 250, 0.92);
+  backdrop-filter: blur(10px);
+  padding: 14px 18px;
+}
+
+.header-conteudo {
+  max-width: 820px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header-esquerda {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Botão quadrado pastel à esquerda */
+.btn-logo-quadrado {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: none;
+  background-color: var(--pastel-verde);
+  color: var(--pastel-verde-icone);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.header-titulo {
+  font-size: 1.12rem;
+  font-weight: 700;
+  color: var(--texto-principal);
+  line-height: 1.2;
+}
+
+.header-usuario {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--texto-suave);
+}
+
+/* Pílula verde-sálvia à direita */
+.btn-pilula-verde {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--verde-destaque);
+  color: #FFFFFF;
+  border: none;
+  padding: 9px 15px;
+  border-radius: 14px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(120, 177, 89, 0.25);
+}
+
+.btn-pilula-verde:hover {
+  background-color: var(--verde-destaque-escuro);
+}
+
+.app-conteudo {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 6px 18px 24px;
+}
+
+.tela {
+  display: none;
+  animation: aparecerSuave 0.22s ease;
+}
+
+.tela.ativa {
+  display: block;
+}
+
+@keyframes aparecerSuave {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.cabecalho-secao {
+  margin-bottom: 18px;
+}
+
+.cabecalho-secao h2 {
+  font-size: 1.32rem;
+  font-weight: 700;
+}
+
+.cabecalho-secao p {
+  font-size: 0.88rem;
+  color: var(--texto-suave);
+}
+
+/* =========================================================
+   BANNER DESTAQUE VERDE & GRADE DE ATALHOS PASTÉIS
+   ========================================================= */
+.banner-destaque-verde {
+  background: linear-gradient(135deg, #82BC62 0%, #669F47 100%);
+  color: #FFFFFF;
+  border-radius: 22px;
+  padding: 20px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+  box-shadow: 0 8px 20px rgba(120, 177, 89, 0.22);
+}
+
+.banner-tag {
+  display: inline-block;
+  font-size: 0.74rem;
+  font-weight: 600;
+  opacity: 0.9;
+  margin-bottom: 6px;
+}
+
+.banner-texto h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-bottom: 4px;
+}
+
+.banner-texto p {
+  font-size: 0.82rem;
+  opacity: 0.92;
+}
+
+.banner-circulo-icone {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.secao-topo-linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.secao-topo-linha h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.link-sutil {
+  background: none;
+  border: none;
+  color: var(--texto-suave);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Quadrados pastéis arredondados (Categories / Acesso Rápido) */
+.grade-atalhos-preview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+@media (min-width: 600px) {
+  .grade-atalhos-preview {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+.tile-pastel {
+  border: none;
+  border-radius: 18px;
+  padding: 16px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.tile-pastel:active {
+  transform: scale(0.96);
+}
+
+.tile-icone svg {
+  width: 26px;
+  height: 26px;
+}
+
+.tile-nome {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--texto-principal);
+}
+
+.tile-verde { background-color: var(--pastel-verde); color: var(--pastel-verde-icone); }
+.tile-lavanda { background-color: var(--pastel-lavanda); color: var(--pastel-lavanda-icone); }
+.tile-pessego { background-color: var(--pastel-pessego); color: var(--pastel-pessego-icone); }
+.tile-azul { background-color: var(--pastel-azul); color: var(--pastel-azul-icone); }
+.tile-amarelo { background-color: var(--pastel-amarelo); color: var(--pastel-amarelo-icone); }
+.tile-rosa { background-color: var(--pastel-rosa); color: var(--pastel-rosa-icone); }
+
+/* =========================================================
+   FAIXAS HORIZONTAIS PASTÉIS COM CÍRCULO BRANCO (REFERÊNCIA 1)
+   ========================================================= */
+.lista-faixas-ajuda {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.faixa-pastel {
+  border-radius: 20px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.faixa-info {
+  flex: 1;
+}
+
+.faixa-passo-tag {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  opacity: 0.75;
+  margin-bottom: 2px;
+}
+
+.faixa-info h3 {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--texto-principal);
+  margin-bottom: 4px;
+}
+
+.faixa-info p {
+  font-size: 0.85rem;
+  color: #464E59;
+  line-height: 1.42;
+}
+
+/* Círculo branco à direita contendo o ícone fluido */
+.faixa-emblema-branco {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.faixa-emblema-branco svg {
+  width: 24px;
+  height: 24px;
+}
+
+.faixa-verde { background-color: var(--pastel-verde); color: var(--pastel-verde-icone); }
+.faixa-azul { background-color: var(--pastel-azul); color: var(--pastel-azul-icone); }
+.faixa-pessego { background-color: var(--pastel-pessego); color: var(--pastel-pessego-icone); }
+.faixa-lavanda { background-color: var(--pastel-lavanda); color: var(--pastel-lavanda-icone); }
+.faixa-amarelo { background-color: var(--pastel-amarelo); color: var(--pastel-amarelo-icone); }
+.faixa-rosa { background-color: var(--pastel-rosa); color: var(--pastel-rosa-icone); }
+
+/* =========================================================
+   BARRA DE NAVEGAÇÃO INFERIOR FIXA
+   ========================================================= */
+.barra-navegacao {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background-color: var(--bg-cartao);
+  border-top: 1px solid var(--borda-suave);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 8px 4px;
+  box-shadow: 0 -4px 16px rgba(35, 39, 45, 0.04);
+}
+
+.nav-item {
+  flex: 1;
+  max-width: 110px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 2px;
+  border: none;
+  background: transparent;
+  color: var(--texto-suave);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.nav-icone-svg svg {
+  width: 21px;
+  height: 21px;
+  display: block;
+}
+
+.nav-texto {
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.nav-item.ativo {
+  background-color: var(--pastel-verde);
+  color: var(--pastel-verde-icone);
 }

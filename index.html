@@ -3,29 +3,260 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#8FB9AA">
+  <meta name="theme-color" content="#78B159">
   <meta name="description" content="Aplicativo familiar de gestão de despensa, receitas e lista de compras.">
   <title>Minha Casa, Minha Despensa</title>
   <link rel="manifest" href="./manifest.json">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%238FB9AA'/><text x='50' y='67' font-size='54' text-anchor='middle'>🏠</text></svg>">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%2378B159'/><path d='M25 46L50 27L75 46V72C75 76 72 79 68 79H32C28 79 25 76 25 72V46Z' fill='none' stroke='white' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/></svg>">
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <main class="setup-container">
-    <div class="setup-card">
-      <div class="setup-badge">Fase 2 Concluída</div>
-      <h1>🏠 Minha Casa, Minha Despensa</h1>
-      <p class="setup-subtitle">Verificando conexão com a nuvem do Google Firebase.</p>
-      
-      <ul class="status-list">
-        <li id="status-html">✅ Estrutura HTML5 carregada</li>
-        <li id="status-css">✅ Paleta de cores pastéis aplicada</li>
-        <li id="status-js">⏳ Verificando JavaScript...</li>
-        <li id="status-firebase">⏳ Conectando ao Google Firebase...</li>
-        <li id="status-pwa">⏳ Verificando recursos PWA (Instalável)...</li>
-      </ul>
+
+  <!-- =======================================================
+       TELA DE ACESSO / LOGIN FAMILIAR
+       ======================================================= -->
+  <section id="tela-login" class="login-wrapper">
+    <div class="login-card">
+      <div class="login-icone" data-icone="casa"></div>
+      <h1>Minha Casa, Minha Despensa</h1>
+      <p class="login-subtitulo">Gestão doméstica compartilhada em tempo real para toda a família.</p>
+
+      <div id="login-mensagem" class="mensagem-feedback oculto" role="alert"></div>
+
+      <form id="form-login" class="formulario-padrao">
+        <div class="campo-grupo">
+          <label for="login-email">E-mail autorizado da família</label>
+          <input type="email" id="login-email" placeholder="seu.email@gmail.com" required autocomplete="email">
+          <small class="dica-campo">Use um dos e-mails liberados nas regras de segurança.</small>
+        </div>
+
+        <div class="campo-grupo">
+          <label for="login-senha">Senha</label>
+          <input type="password" id="login-senha" placeholder="Digite sua senha" required autocomplete="current-password">
+          <small class="dica-campo">Mínimo de 6 caracteres (cadastrada no Firebase).</small>
+        </div>
+
+        <button type="submit" id="btn-entrar-email" class="btn btn-primario btn-bloco">
+          Entrar com E-mail e Senha
+        </button>
+      </form>
+
+      <div class="divisor-ou"><span>ou acesse rápido</span></div>
+
+      <button type="button" id="btn-entrar-google" class="btn btn-google btn-bloco">
+        <span class="google-g">G</span> Entrar com Conta Google
+      </button>
     </div>
-  </main>
+  </section>
+
+  <!-- =======================================================
+       APLICATIVO PRINCIPAL (VISÍVEL APÓS LOGIN AUTORIZADO)
+       ======================================================= -->
+  <div id="app-shell" class="app-shell oculto">
+    
+    <!-- Cabeçalho Limpo Inspirado na Referência -->
+    <header class="app-header">
+      <div class="header-conteudo">
+        <div class="header-esquerda">
+          <button type="button" class="btn-logo-quadrado" data-ir-para="inicio" title="Voltar ao Início">
+            <span class="icone-svg" data-icone="casa"></span>
+          </button>
+          <div class="header-saudacao">
+            <h1 class="header-titulo">Olá, Família!</h1>
+            <span id="usuario-logado-email" class="header-usuario">Carregando...</span>
+          </div>
+        </div>
+
+        <!-- Pílula Verde-Sálvia à Direita -->
+        <button type="button" id="btn-sair" class="btn-pilula-verde" title="Sair da conta">
+          <span class="icone-svg-sm" data-icone="sair"></span>
+          <span>Sair</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Área Central das 7 Telas -->
+    <main class="app-conteudo">
+
+      <!-- 1. TELA INICIAL (INÍCIO) -->
+      <section id="tela-inicio" class="tela ativa">
+        <!-- Banner Destaque Verde-Sálvia -->
+        <div class="banner-destaque-verde">
+          <div class="banner-texto">
+            <span class="banner-tag">#MinhaCasaMinhaDespensa</span>
+            <h2>Sua despensa organizada e sincronizada</h2>
+            <p>Visual atualizado com paleta pastel e ícones fluidos pronto para a Fase 4.</p>
+          </div>
+          <div class="banner-circulo-icone">
+            <span class="icone-svg-lg" data-icone="despensa"></span>
+          </div>
+        </div>
+
+        <!-- Prévia dos 6 Atalhos Rápidos no Estilo Pastel -->
+        <div class="secao-topo-linha">
+          <h3>Acesso Rápido</h3>
+          <button type="button" class="link-sutil" data-ir-para="ajuda">Ver Guia</button>
+        </div>
+
+        <div class="grade-atalhos-preview">
+          <button type="button" class="tile-pastel tile-verde" data-ir-para="despensa">
+            <span class="tile-icone" data-icone="cadastrar"></span>
+            <span class="tile-nome">Cadastrar</span>
+          </button>
+          <button type="button" class="tile-pastel tile-pessego" data-ir-para="retirada">
+            <span class="tile-icone" data-icone="retirar"></span>
+            <span class="tile-nome">Retirar</span>
+          </button>
+          <button type="button" class="tile-pastel tile-lavanda" data-ir-para="receitas">
+            <span class="tile-icone" data-icone="receitas"></span>
+            <span class="tile-nome">Receitas</span>
+          </button>
+          <button type="button" class="tile-pastel tile-azul" data-ir-para="compras">
+            <span class="tile-icone" data-icone="compras"></span>
+            <span class="tile-nome">Compras</span>
+          </button>
+          <button type="button" class="tile-pastel tile-rosa" data-ir-para="alertas">
+            <span class="tile-icone" data-icone="alertas"></span>
+            <span class="tile-nome">Alertas</span>
+          </button>
+          <button type="button" class="tile-pastel tile-amarelo" data-ir-para="ajuda">
+            <span class="tile-icone" data-icone="ajuda"></span>
+            <span class="tile-nome">Como Usar</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- 2. TELA DE DESPENSA E CADASTRO -->
+      <section id="tela-despensa" class="tela">
+        <div class="cabecalho-secao">
+          <h2>Controle da Despensa</h2>
+          <p>Gerencie mantimentos e materiais de limpeza</p>
+        </div>
+        <div class="faixa-pastel faixa-azul">
+          <div class="faixa-info">
+            <h3>Módulo Despensa</h3>
+            <p>Na <strong>Fase 4</strong>, construiremos aqui o formulário completo de cadastro com categorias dependentes e cálculo opcional de rendimento em xícaras.</p>
+          </div>
+          <div class="faixa-emblema-branco">
+            <span class="icone-svg" data-icone="despensa"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. TELA DEDICADA DE RETIRADA -->
+      <section id="tela-retirada" class="tela">
+        <div class="cabecalho-secao">
+          <h2>Retirada de Item</h2>
+          <p>Dê baixa rápida no consumo diário</p>
+        </div>
+        <div class="faixa-pastel faixa-pessego">
+          <div class="faixa-info">
+            <h3>Baixa Automática</h3>
+            <p>Na <strong>Fase 5</strong>, ativaremos aqui a seleção de produtos com saldo maior que zero e a conversão automática de colheres, xícaras, gramas e litros.</p>
+          </div>
+          <div class="faixa-emblema-branco">
+            <span class="icone-svg" data-icone="retirar"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. TELA DE RECEITAS INTELIGENTES -->
+      <section id="tela-receitas" class="tela">
+        <div class="cabecalho-secao">
+          <h2>Receitas da Família</h2>
+          <p>Verificação automática de ingredientes em casa</p>
+        </div>
+        <div class="faixa-pastel faixa-lavanda">
+          <div class="faixa-info">
+            <h3>Checagem Verde / Vermelha</h3>
+            <p>Na <strong>Fase 6</strong>, implementaremos aqui o cadastro de receitas e o selo inteligente que calcula se todos os ingredientes estão disponíveis na despensa.</p>
+          </div>
+          <div class="faixa-emblema-branco">
+            <span class="icone-svg" data-icone="receitas"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. TELA DE LISTA DE COMPRAS INTERATIVA -->
+      <section id="tela-compras" class="tela">
+        <div class="cabecalho-secao">
+          <h2>Lista de Compras</h2>
+          <p>Sincronizada em tempo real no supermercado</p>
+        </div>
+        <div class="faixa-pastel faixa-amarelo">
+          <div class="faixa-info">
+            <h3>Carrinho Compartilhado</h3>
+            <p>Na <strong>Fase 7</strong>, ativaremos a importação direta das receitas, o toque para riscar itens no mercado e o botão dinâmico <strong>Finalizar Lista</strong>.</p>
+          </div>
+          <div class="faixa-emblema-branco">
+            <span class="icone-svg" data-icone="compras"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. TELA EXCLUSIVA DE ALERTAS -->
+      <section id="tela-alertas" class="tela">
+        <div class="cabecalho-secao">
+          <h2>Alertas de Reposição</h2>
+          <p>Produtos acabando ou zerados na despensa</p>
+        </div>
+        <div class="faixa-pastel faixa-rosa">
+          <div class="faixa-info">
+            <h3>Monitoramento e E-mail</h3>
+            <p>Na <strong>Fase 8</strong>, reuniremos aqui os itens em estado laranja ou vermelho e configuraremos o envio automático de e-mails gratuitos via EmailJS.</p>
+          </div>
+          <div class="faixa-emblema-branco">
+            <span class="icone-svg" data-icone="alertas"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. TELA DE AJUDA / COMO USAR (FAIXAS PASTÉIS COM ÍCONES FLUIDOS) -->
+      <section id="tela-ajuda" class="tela">
+        <div class="cabecalho-secao">
+          <h2>Como Usar o App</h2>
+          <p>Guia rápido em 7 passos para toda a família</p>
+        </div>
+
+        <!-- Lista renderizada em faixas pastéis com círculo branco à direita -->
+        <div id="lista-passos-ajuda" class="lista-faixas-ajuda"></div>
+      </section>
+
+    </main>
+
+    <!-- Barra de Navegação Inferior Fixa com Ícones Fluidos -->
+    <nav class="barra-navegacao" aria-label="Navegação principal">
+      <button type="button" class="nav-item ativo" data-tela="inicio">
+        <span class="nav-icone-svg" data-icone="casa"></span>
+        <span class="nav-texto">Início</span>
+      </button>
+      <button type="button" class="nav-item" data-tela="despensa">
+        <span class="nav-icone-svg" data-icone="despensa"></span>
+        <span class="nav-texto">Despensa</span>
+      </button>
+      <button type="button" class="nav-item" data-tela="retirada">
+        <span class="nav-icone-svg" data-icone="retirar"></span>
+        <span class="nav-texto">Retirar</span>
+      </button>
+      <button type="button" class="nav-item" data-tela="receitas">
+        <span class="nav-icone-svg" data-icone="receitas"></span>
+        <span class="nav-texto">Receitas</span>
+      </button>
+      <button type="button" class="nav-item" data-tela="compras">
+        <span class="nav-icone-svg" data-icone="compras"></span>
+        <span class="nav-texto">Compras</span>
+      </button>
+      <button type="button" class="nav-item" data-tela="alertas">
+        <span class="nav-icone-svg" data-icone="alertas"></span>
+        <span class="nav-texto">Alertas</span>
+      </button>
+      <button type="button" class="nav-item" data-tela="ajuda">
+        <span class="nav-icone-svg" data-icone="ajuda"></span>
+        <span class="nav-texto">Ajuda</span>
+      </button>
+    </nav>
+
+  </div>
 
   <script type="module" src="./app.js"></script>
 </body>
