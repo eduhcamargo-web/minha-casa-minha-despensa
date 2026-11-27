@@ -1225,3 +1225,98 @@ body {
   line-height: 1.6;
   white-space: pre-line;
 }
+
+/* =========================================================
+   MINI-CADASTRO DE INGREDIENTE DENTRO DA RECEITA (FASE 6.5)
+   ========================================================= */
+.botoes-topo-ingredientes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.btn-novo-prod-rec {
+  background-color: var(--verde-destaque);
+  color: #FFFFFF;
+  border-color: var(--verde-destaque);
+}
+
+.btn-novo-prod-rec:hover {
+  background-color: var(--verde-destaque-escuro);
+  color: #FFFFFF;
+}
+
+.painel-mini-cadastro {
+  background-color: #FFFFFF;
+  border: 1.5px solid var(--verde-destaque);
+  border-radius: 16px;
+  padding: 15px;
+  animation: aparecerSuave 0.2s ease;
+}
+
+.mini-cadastro-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  color: var(--pastel-verde-icone);
+  font-size: 0.92rem;
+}
+
+.btn-fechar-mini {
+  background: var(--bg-campo);
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--texto-suave);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.mini-cadastro-dica {
+  font-size: 0.78rem;
+  color: var(--texto-suave);
+  margin-bottom: 12px;
+  line-height: 1.38;
+}
+
+.mini-cadastro-campos {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.mini-cadastro-campos input,
+.mini-cadastro-campos select {
+  padding: 10px 12px;
+  font-size: 0.9rem;
+}
+
+.mini-cadastro-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.btn-sm {
+  padding: 9px 14px;
+  font-size: 0.84rem;
+}
+
+/* =========================================================
+   BOTÃO RECEITA FEITA / BAIXA EM LOTE (FASE 6.6)
+   ========================================================= */
+.box-acao-receita-feita {
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.texto-centralizado {
+  text-align: center;
+  display: block;
+}

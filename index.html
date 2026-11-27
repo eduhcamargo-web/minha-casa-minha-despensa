@@ -344,7 +344,7 @@
       </section>
 
       <!-- =====================================================
-           4. TELA DE RECEITAS INTELIGENTES (FASE 6)
+           4. TELA DE RECEITAS INTELIGENTES
            ===================================================== -->
       <section id="tela-receitas" class="tela">
         <div class="cabecalho-secao-flex">
@@ -398,16 +398,83 @@
               </div>
             </div>
 
-            <!-- Lista Dinâmica de Ingredientes Vinculados à Despensa -->
+            <!-- Lista Dinâmica de Ingredientes + Cadastro Rápido de Novo Produto -->
             <div class="caixa-ingredientes-form">
               <div class="topo-ingredientes-form">
                 <div>
-                  <label>4. Ingredientes Vinculados à Despensa *</label>
-                  <small class="dica-campo">Selecione cada produto e a medida usada na receita.</small>
+                  <label>4. Ingredientes da Receita *</label>
+                  <small class="dica-campo">Escolha um item da despensa ou cadastre um ingrediente novo na hora.</small>
                 </div>
-                <button type="button" id="btn-adicionar-ingrediente-form" class="btn-add-mini">
-                  + Ingrediente
-                </button>
+                <div class="botoes-topo-ingredientes">
+                  <button type="button" id="btn-toggle-novo-produto-receita" class="btn-add-mini btn-novo-prod-rec">
+                    + Novo Ingrediente
+                  </button>
+                  <button type="button" id="btn-adicionar-ingrediente-form" class="btn-add-mini">
+                    + Linha
+                  </button>
+                </div>
+              </div>
+
+              <!-- Painel Rápido para Cadastrar Produto Inédito Direto na Receita -->
+              <div id="box-novo-produto-receita" class="painel-mini-cadastro oculto">
+                <div class="mini-cadastro-topo">
+                  <strong>Cadastrar Novo Ingrediente na Despensa</strong>
+                  <button type="button" id="btn-fechar-mini-cadastro" class="btn-fechar-mini" title="Fechar">✕</button>
+                </div>
+                <p class="mini-cadastro-dica">
+                  Não tem o ingrediente em casa? Cadastre aqui com saldo <strong>0</strong> para já vincular à receita e enviar depois para a Lista de Compras.
+                </p>
+
+                <div class="mini-cadastro-campos">
+                  <div class="campo-grupo">
+                    <label for="rec-novo-nome">Nome do Ingrediente *</label>
+                    <input type="text" id="rec-novo-nome" placeholder="Ex: Fermento em Pó, Leite Condensado, Canela">
+                  </div>
+
+                  <div class="grade-dois-campos">
+                    <div class="campo-grupo">
+                      <label for="rec-novo-categoria">Subcategoria *</label>
+                      <select id="rec-novo-categoria"></select>
+                    </div>
+
+                    <div class="campo-grupo">
+                      <label for="rec-novo-quantidade">Quantidade em Casa</label>
+                      <input type="number" id="rec-novo-quantidade" step="0.01" min="0" value="0">
+                      <small class="dica-campo">Deixe 0 se não tiver em casa agora.</small>
+                    </div>
+                  </div>
+
+                  <div class="grade-dois-campos">
+                    <div class="campo-grupo">
+                      <label for="rec-novo-tamanho">Tamanho do Pacote *</label>
+                      <input type="number" id="rec-novo-tamanho" step="0.01" min="0.01" placeholder="Ex: 100 ou 1">
+                    </div>
+
+                    <div class="campo-grupo">
+                      <label for="rec-novo-unidade">Unidade do Pacote *</label>
+                      <select id="rec-novo-unidade"></select>
+                    </div>
+                  </div>
+
+                  <div class="grade-dois-campos">
+                    <div class="campo-grupo">
+                      <label for="rec-novo-minimo">Estoque Mínimo</label>
+                      <input type="number" id="rec-novo-minimo" step="0.01" min="0" value="1">
+                    </div>
+
+                    <div class="campo-grupo">
+                      <label for="rec-novo-xicaras">Rende quantas xícaras? (opcional)</label>
+                      <input type="number" id="rec-novo-xicaras" step="0.1" min="0.1" placeholder="Deixe vazio se não usar">
+                    </div>
+                  </div>
+
+                  <div class="mini-cadastro-acoes">
+                    <button type="button" id="btn-cancelar-mini-cadastro" class="btn btn-google btn-sm">Cancelar</button>
+                    <button type="button" id="btn-salvar-mini-cadastro" class="btn btn-primario btn-sm">
+                      Salvar e Usar na Receita
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div id="lista-inputs-ingredientes" class="lista-linhas-ingredientes"></div>
@@ -426,7 +493,7 @@
           </form>
         </div>
 
-        <!-- Painel de Visualização Aberta de Uma Receita (Com Selo Verde/Vermelho) -->
+        <!-- Painel de Visualização Aberta de Uma Receita -->
         <div id="painel-detalhe-receita" class="cartao-detalhe-receita oculto">
           <div class="detalhe-receita-barra-topo">
             <button type="button" id="btn-voltar-receitas" class="btn-voltar-sutil">
@@ -444,8 +511,18 @@
             </div>
           </div>
 
-          <!-- Selo Dinâmico Calculado em Tempo Real (Verde ou Vermelho) -->
           <div id="selo-disponibilidade-receita" class="selo-receita-status"></div>
+
+          <!-- Botão de Baixa em Lote (Aparece automaticamente quando todos os ingredientes estão disponíveis) -->
+          <div id="box-acao-concluir-receita" class="box-acao-receita-feita oculto">
+            <button type="button" id="btn-concluir-receita" class="btn btn-primario btn-bloco">
+              <span class="icone-svg-sm" data-icone="coracaoCheck"></span>
+              <span>Receita Feita! Descontar Todos os Ingredientes</span>
+            </button>
+            <small class="dica-campo texto-centralizado">
+              Subtrai automaticamente da despensa a quantidade exata de cada ingrediente desta receita.
+            </small>
+          </div>
 
           <div class="detalhe-receita-cabecalho">
             <div class="detalhe-tags">

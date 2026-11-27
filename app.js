@@ -1,5 +1,5 @@
 // =========================================================
-// MINHA CASA, MINHA DESPENSA - LÓGICA PRINCIPAL (FASE 6)
+// MINHA CASA, MINHA DESPENSA - LÓGICA PRINCIPAL (FASE 6.6)
 // =========================================================
 import { auth, db } from "./firebase-config.js";
 import {
@@ -20,7 +20,8 @@ import {
   limit,
   orderBy,
   onSnapshot,
-  serverTimestamp
+  serverTimestamp,
+  writeBatch
 } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { CATEGORIAS_FIXAS, MEDIDAS_FIXAS, INSTRUCOES_AJUDA } from "./dados-fixos.js";
 import { ICONES, inserirIconesNaPagina } from "./icones.js";
@@ -41,7 +42,6 @@ const appShell = document.getElementById("app-shell");
 const loginMensagem = document.getElementById("login-mensagem");
 const usuarioLogadoEmail = document.getElementById("usuario-logado-email");
 
-// Formata números decimais de forma limpa (ex: 1.50 -> 1,5 | 2.00 -> 2)
 function formatarNumero(valor) {
   const num = Number(valor) || 0;
   return Number.isInteger(num)
@@ -92,7 +92,7 @@ function mostrarMensagemReceitas(texto, tipo = "sucesso") {
     tipo === "erro" ? "mensagem-erro" : "mensagem-sucesso"
   }`;
   box.classList.remove("oculto");
-  setTimeout(() => box.classList.add("oculto"), 4500);
+  setTimeout(() => box.classList.add("oculto"), 5000);
 }
 
 // =========================================================
@@ -544,10 +544,9 @@ function iniciarEscutaHistoricoRetiradas() {
 }
 
 // =========================================================
-// 5. RECEITAS INTELIGENTES COM VERIFICAÇÃO DE ESTOQUE (FASE 6)
+// 5. RECEITAS INTELIGENTES + BAIXA EM LOTE AO PREPARAR
 // =========================================================
 function obterMedidasUniversaisReceita() {
-  // Retorna as 8 medidas universais (xícara, colher de sopa, colher de chá, g, kg, ml, L, unidade)
   return MEDIDAS_FIXAS.unidadesRetiradaReceita.filter((u) => u.id !== "pacote");
 }
 
@@ -556,7 +555,60 @@ function nomeAmigavelUnidade(unidadeId) {
   return encontrada ? encontrada.nome.split(" (")[0] : unidadeId;
 }
 
-// Verifica em tempo real cada ingrediente da receita contra a despensa atual
+function gerarHtmlOpcoesProdutosReceita() {
+  if (listaProdutosDespensa.length === 0) {
+    return `<option value="">Clique em "+ Novo Ingrediente" acima para cadastrar</option>`;
+  }
+  return listaProdutosDespensa
+    .map((p) => `<option value="${p.id}">${p.nome} (${p.unidadeEmbalagem})</option>`)
+    .join("");
+}
+
+function atualizarTodosSelectsIngredientesReceita() {
+  const opcoesHtml = gerarHtmlOpcoesProdutosReceita();
+  document.querySelectorAll("#lista-inputs-ingredientes .ing-select-produto").forEach((select) => {
+    const valorAtual = select.value;
+    select.innerHTML = opcoesHtml;
+    if (valorAtual && listaProdutosDespensa.some((p) => p.id === valorAtual)) {
+      select.value = valorAtual;
+    }
+  });
+}
+
+function prepararCamposMiniCadastroReceita() {
+  const selectCat = document.getElementById("rec-novo-categoria");
+  const selectUnid = document.getElementById("rec-novo-unidade");
+
+  if (selectCat) {
+    selectCat.innerHTML = (CATEGORIAS_FIXAS.Mantimentos || [])
+      .map((cat) => `<option value="${cat}">${cat}</option>`)
+      .join("");
+  }
+
+  if (selectUnid) {
+    selectUnid.innerHTML = MEDIDAS_FIXAS.unidadesEmbalagem
+      .map((u) => `<option value="${u.id}">${u.nome}</option>`)
+      .join("");
+  }
+}
+
+function abrirFecharMiniCadastroReceita(abrir) {
+  const box = document.getElementById("box-novo-produto-receita");
+  if (!box) return;
+
+  if (abrir) {
+    document.getElementById("rec-novo-nome").value = "";
+    document.getElementById("rec-novo-quantidade").value = "0";
+    document.getElementById("rec-novo-tamanho").value = "";
+    document.getElementById("rec-novo-minimo").value = "1";
+    document.getElementById("rec-novo-xicaras").value = "";
+    box.classList.remove("oculto");
+    document.getElementById("rec-novo-nome").focus();
+  } else {
+    box.classList.add("oculto");
+  }
+}
+
 function avaliarDisponibilidadeReceita(receita) {
   const ingredientesAvaliados = (receita.ingredientes || []).map((ing) => {
     const produto = listaProdutosDespensa.find((p) => p.id === ing.produtoId);
@@ -586,7 +638,6 @@ function avaliarDisponibilidadeReceita(receita) {
       };
     }
 
-    // Margem mínima de 0.0005 para evitar falhas de arredondamento decimal (ex: 1/6 * 6)
     const temSuficiente = saldoAtual + 0.0005 >= conversao.fracaoPacote;
 
     if (!temSuficiente) {
@@ -606,6 +657,7 @@ function avaliarDisponibilidadeReceita(receita) {
 
     return {
       ...ing,
+      produtoRef: produto,
       nomeExibicao,
       unidadeLabel,
       disponivel: true,
@@ -626,13 +678,7 @@ function adicionarLinhaIngredienteForm(dadosIngrediente = null) {
   const container = document.getElementById("lista-inputs-ingredientes");
   if (!container) return;
 
-  const opcoesProdutos =
-    listaProdutosDespensa.length > 0
-      ? listaProdutosDespensa
-          .map((p) => `<option value="${p.id}">${p.nome} (${p.unidadeEmbalagem})</option>`)
-          .join("")
-      : `<option value="">Cadastre produtos na Despensa primeiro</option>`;
-
+  const opcoesProdutos = gerarHtmlOpcoesProdutosReceita();
   const opcoesMedidas = obterMedidasUniversaisReceita()
     .map((m) => `<option value="${m.id}">${m.nome}</option>`)
     .join("");
@@ -647,9 +693,15 @@ function adicionarLinhaIngredienteForm(dadosIngrediente = null) {
   `;
 
   if (dadosIngrediente) {
-    linha.querySelector(".ing-select-produto").value = dadosIngrediente.produtoId || "";
-    linha.querySelector(".ing-input-qtd").value = dadosIngrediente.quantidade || "";
-    linha.querySelector(".ing-select-unidade").value = dadosIngrediente.unidadeId || "xicara";
+    if (dadosIngrediente.produtoId) {
+      linha.querySelector(".ing-select-produto").value = dadosIngrediente.produtoId;
+    }
+    if (dadosIngrediente.quantidade) {
+      linha.querySelector(".ing-input-qtd").value = dadosIngrediente.quantidade;
+    }
+    if (dadosIngrediente.unidadeId) {
+      linha.querySelector(".ing-select-unidade").value = dadosIngrediente.unidadeId;
+    }
   }
 
   linha.querySelector(".btn-remover-linha").addEventListener("click", () => {
@@ -661,6 +713,7 @@ function adicionarLinhaIngredienteForm(dadosIngrediente = null) {
   });
 
   container.appendChild(linha);
+  return linha;
 }
 
 function abrirFormularioReceita(receitaParaEditar = null) {
@@ -671,6 +724,7 @@ function abrirFormularioReceita(receitaParaEditar = null) {
 
   painelDetalhe.classList.add("oculto");
   visaoLista.classList.add("oculto");
+  abrirFecharMiniCadastroReceita(false);
   receitaAbertaId = null;
 
   containerInputs.innerHTML = "";
@@ -699,6 +753,7 @@ function abrirFormularioReceita(receitaParaEditar = null) {
 
 function fecharFormularioReceita() {
   document.getElementById("painel-form-receita").classList.add("oculto");
+  abrirFecharMiniCadastroReceita(false);
   document.getElementById("visao-lista-receitas").classList.remove("oculto");
   document.getElementById("form-receita").reset();
   document.getElementById("receita-id-edicao").value = "";
@@ -730,10 +785,12 @@ function renderizarDetalheReceita() {
 
   const avaliacao = avaliarDisponibilidadeReceita(receita);
   const boxSelo = document.getElementById("selo-disponibilidade-receita");
+  const boxAcaoConcluir = document.getElementById("box-acao-concluir-receita");
 
   if (avaliacao.tudoDisponivel) {
     boxSelo.className = "selo-receita-status selo-receita-verde";
     boxSelo.textContent = "✅ Você possui todos os ingredientes na despensa!";
+    boxAcaoConcluir.classList.remove("oculto");
   } else {
     const itensFaltantesHtml = avaliacao.faltantes
       .map((f) => `<li>${f.motivoFalta}</li>`)
@@ -744,6 +801,7 @@ function renderizarDetalheReceita() {
       <strong>❌ Faltam ingredientes para esta receita</strong>
       <ul class="lista-faltantes-selo">${itensFaltantesHtml}</ul>
     `;
+    boxAcaoConcluir.classList.add("oculto");
   }
 
   document.getElementById("detalhe-rec-tipo").textContent = receita.tipoRefeicao;
@@ -819,14 +877,9 @@ function renderizarListaReceitas() {
 }
 
 function configurarModuloReceitas() {
+  prepararCamposMiniCadastroReceita();
+
   document.getElementById("btn-abrir-form-receita").addEventListener("click", () => {
-    if (listaProdutosDespensa.length === 0) {
-      mostrarMensagemReceitas(
-        "Cadastre primeiro os produtos na aba Despensa para poder vinculá-los aos ingredientes da receita.",
-        "erro"
-      );
-      return;
-    }
     abrirFormularioReceita(null);
   });
 
@@ -838,15 +891,188 @@ function configurarModuloReceitas() {
     adicionarLinhaIngredienteForm(null);
   });
 
+  // Botão "Receita Feita! Descontar Todos os Ingredientes"
+  document.getElementById("btn-concluir-receita").addEventListener("click", async () => {
+    const receita = listaReceitas.find((r) => r.id === receitaAbertaId);
+    if (!receita) return;
+
+    const avaliacao = avaliarDisponibilidadeReceita(receita);
+    if (!avaliacao.tudoDisponivel) {
+      mostrarMensagemReceitas("Ops! Algum ingrediente ficou sem saldo suficiente na despensa.", "erro");
+      renderizarDetalheReceita();
+      return;
+    }
+
+    const totalItens = avaliacao.ingredientesAvaliados.length;
+    const confirmou = window.confirm(
+      `Confirmar preparo de "${receita.nome}"?\n\nTodos os ${totalItens} ingredientes serão descontados automaticamente da despensa.`
+    );
+
+    if (!confirmou) return;
+
+    const btnConcluir = document.getElementById("btn-concluir-receita");
+    btnConcluir.disabled = true;
+
+    try {
+      const batch = writeBatch(db);
+      const usuarioEmail = auth.currentUser ? auth.currentUser.email : "familiar";
+
+      // Soma frações caso o mesmo produto apareça mais de uma vez na receita
+      const fracaoTotalPorProduto = new Map();
+      avaliacao.ingredientesAvaliados.forEach((ing) => {
+        const acumulado = fracaoTotalPorProduto.get(ing.produtoId) || 0;
+        fracaoTotalPorProduto.set(ing.produtoId, acumulado + ing.fracaoNecessaria);
+      });
+
+      // 1. Atualiza o saldo de cada produto na despensa em lote
+      const novoSaldoPorProduto = new Map();
+      fracaoTotalPorProduto.forEach((fracaoDescontar, produtoId) => {
+        const produto = listaProdutosDespensa.find((p) => p.id === produtoId);
+        if (!produto) return;
+
+        const saldoAtual = Number(produto.quantidadeAtual) || 0;
+        const novoSaldo = Math.max(0, Number((saldoAtual - fracaoDescontar).toFixed(4)));
+        novoSaldoPorProduto.set(produtoId, { saldoAtual, novoSaldo });
+
+        batch.update(doc(db, "despensa", produtoId), {
+          quantidadeAtual: novoSaldo,
+          atualizadoPor: usuarioEmail,
+          atualizadoEm: serverTimestamp()
+        });
+      });
+
+      // 2. Registra cada ingrediente no histórico de retiradas da família
+      avaliacao.ingredientesAvaliados.forEach((ing) => {
+        const produto = ing.produtoRef;
+        const saldos = novoSaldoPorProduto.get(ing.produtoId) || { saldoAtual: 0, novoSaldo: 0 };
+        const unidadeObj = MEDIDAS_FIXAS.unidadesRetiradaReceita.find((u) => u.id === ing.unidadeId);
+
+        const novaRetiradaRef = doc(collection(db, "retiradas"));
+        batch.set(novaRetiradaRef, {
+          produtoId: ing.produtoId,
+          produtoNome: `${ing.nomeExibicao} (Receita: ${receita.nome})`,
+          grupo: produto ? produto.grupo : "Mantimentos",
+          categoria: produto ? produto.categoria : "Outros",
+          quantidadeRetirada: ing.quantidade,
+          unidadeRetirada: ing.unidadeId,
+          unidadeRetiradaNome: unidadeObj ? unidadeObj.nome : ing.unidadeId,
+          fracaoPacoteDescontada: Number(ing.fracaoNecessaria.toFixed(4)),
+          saldoAnterior: saldos.saldoAtual,
+          saldoNovo: saldos.novoSaldo,
+          retiradoPor: usuarioEmail,
+          dataRetirada: serverTimestamp()
+        });
+      });
+
+      await batch.commit();
+
+      mostrarMensagemReceitas(
+        `Receita "${receita.nome}" concluída! Todos os ingredientes foram descontados da despensa.`
+      );
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (erro) {
+      console.error("Erro ao descontar ingredientes da receita:", erro);
+      mostrarMensagemReceitas("Erro ao descontar ingredientes. Tente novamente.", "erro");
+    } finally {
+      btnConcluir.disabled = false;
+    }
+  });
+
+  // Botões do Mini-Cadastro de Novo Ingrediente dentro da Receita
+  document.getElementById("btn-toggle-novo-produto-receita").addEventListener("click", () => {
+    const box = document.getElementById("box-novo-produto-receita");
+    abrirFecharMiniCadastroReceita(box.classList.contains("oculto"));
+  });
+
+  document.getElementById("btn-fechar-mini-cadastro").addEventListener("click", () => {
+    abrirFecharMiniCadastroReceita(false);
+  });
+
+  document.getElementById("btn-cancelar-mini-cadastro").addEventListener("click", () => {
+    abrirFecharMiniCadastroReceita(false);
+  });
+
+  document.getElementById("btn-salvar-mini-cadastro").addEventListener("click", async () => {
+    const nome = document.getElementById("rec-novo-nome").value.trim();
+    const categoria = document.getElementById("rec-novo-categoria").value;
+    const quantidadeAtual = parseFloat(document.getElementById("rec-novo-quantidade").value);
+    const tamanhoEmbalagem = parseFloat(document.getElementById("rec-novo-tamanho").value);
+    const unidadeEmbalagem = document.getElementById("rec-novo-unidade").value;
+    const estoqueMinimo = parseFloat(document.getElementById("rec-novo-minimo").value);
+    const xicarasVal = parseFloat(document.getElementById("rec-novo-xicaras").value);
+
+    if (!nome) {
+      mostrarMensagemReceitas("Digite o nome do novo ingrediente.", "erro");
+      document.getElementById("rec-novo-nome").focus();
+      return;
+    }
+
+    if (isNaN(tamanhoEmbalagem) || tamanhoEmbalagem <= 0) {
+      mostrarMensagemReceitas("Informe o tamanho do pacote fechado (ex: 500 ou 1).", "erro");
+      document.getElementById("rec-novo-tamanho").focus();
+      return;
+    }
+
+    const btnSalvarMini = document.getElementById("btn-salvar-mini-cadastro");
+    btnSalvarMini.disabled = true;
+    btnSalvarMini.textContent = "Salvando...";
+
+    const usaXicaras = !isNaN(xicarasVal) && xicarasVal > 0;
+    const dadosNovoProduto = {
+      grupo: "Mantimentos",
+      categoria,
+      nome,
+      tamanhoEmbalagem,
+      unidadeEmbalagem,
+      quantidadeAtual: isNaN(quantidadeAtual) || quantidadeAtual < 0 ? 0 : quantidadeAtual,
+      estoqueMinimo: isNaN(estoqueMinimo) || estoqueMinimo < 0 ? 1 : estoqueMinimo,
+      usaRendimentoXicaras: usaXicaras,
+      xicarasPorEmbalagem: usaXicaras ? xicarasVal : null,
+      atualizadoPor: auth.currentUser ? auth.currentUser.email : "familiar",
+      atualizadoEm: serverTimestamp()
+    };
+
+    try {
+      const docCriado = await addDoc(collection(db, "despensa"), dadosNovoProduto);
+
+      if (!listaProdutosDespensa.some((p) => p.id === docCriado.id)) {
+        listaProdutosDespensa.push({ id: docCriado.id, ...dadosNovoProduto });
+        listaProdutosDespensa.sort((a, b) => a.nome.localeCompare(b.nome));
+      }
+
+      atualizarTodosSelectsIngredientesReceita();
+
+      const linhas = Array.from(
+        document.querySelectorAll("#lista-inputs-ingredientes .linha-ingrediente-input")
+      );
+      const linhaVazia = linhas.find((l) => !l.querySelector(".ing-input-qtd").value);
+
+      if (linhaVazia) {
+        linhaVazia.querySelector(".ing-select-produto").value = docCriado.id;
+        linhaVazia.querySelector(".ing-input-qtd").focus();
+      } else {
+        const novaLinha = adicionarLinhaIngredienteForm({ produtoId: docCriado.id });
+        novaLinha.querySelector(".ing-input-qtd").focus();
+      }
+
+      abrirFecharMiniCadastroReceita(false);
+      mostrarMensagemReceitas(`"${nome}" cadastrado na despensa e selecionado na receita!`);
+    } catch (erro) {
+      console.error("Erro ao cadastrar ingrediente rápido:", erro);
+      mostrarMensagemReceitas("Erro ao cadastrar ingrediente. Tente novamente.", "erro");
+    } finally {
+      btnSalvarMini.disabled = false;
+      btnSalvarMini.textContent = "Salvar e Usar na Receita";
+    }
+  });
+
   document.getElementById("busca-receitas").addEventListener("input", renderizarListaReceitas);
 
-  // Editar receita aberta
   document.getElementById("btn-editar-receita-aberta").addEventListener("click", () => {
     const receita = listaReceitas.find((r) => r.id === receitaAbertaId);
     if (receita) abrirFormularioReceita(receita);
   });
 
-  // Excluir receita aberta
   document.getElementById("btn-excluir-receita-aberta").addEventListener("click", async () => {
     const receita = listaReceitas.find((r) => r.id === receitaAbertaId);
     if (!receita) return;
@@ -864,7 +1090,6 @@ function configurarModuloReceitas() {
     }
   });
 
-  // Salvar receita nova ou edição
   document.getElementById("form-receita").addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -1116,6 +1341,7 @@ function iniciarEscutaTempoRealDespensa() {
       renderizarResumoVivoInicio();
       renderizarListaGerenciarDespensa();
       atualizarListaProdutosRetirada();
+      atualizarTodosSelectsIngredientesReceita();
       renderizarListaReceitas();
       if (receitaAbertaId) {
         renderizarDetalheReceita();
