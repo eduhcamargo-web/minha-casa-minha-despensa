@@ -57,7 +57,13 @@ export const ICONES = Object.freeze({
   relogio: `<svg ${SVG_BASE}><circle cx="12" cy="12" r="8"/><path d="M12 8V12L14.8 14"/></svg>`,
 
   // Seta esquerda arredondada (Voltar)
-  voltar: `<svg ${SVG_BASE}><path d="M19 12H5.5"/><path d="M10.5 7L5.5 12L10.5 17"/></svg>`
+  voltar: `<svg ${SVG_BASE}><path d="M19 12H5.5"/><path d="M10.5 7L5.5 12L10.5 17"/></svg>`,
+
+  // Carrinho de supermercado fluido (Adicionar à Lista de Compras)
+  carrinho: `<svg ${SVG_BASE}><path d="M3.5 5.5H5.8L7.8 14.5C8 15.4 8.8 16 9.7 16H17.3C18.2 16 19 15.4 19.2 14.5L20.5 8.5H6.5"/><circle cx="9.5" cy="19.2" r="1.2"/><circle cx="17.2" cy="19.2" r="1.2"/></svg>`,
+
+  // Visto / Check arredondado (Marcar item comprado)
+  check: `<svg ${SVG_BASE}><path d="M5.5 12.5L9.8 16.8L18.8 7.5"/></svg>`
 });
 
 // Preenche automaticamente qualquer elemento HTML com atributo data-icone="nome"

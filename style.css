@@ -1320,3 +1320,216 @@ body {
   text-align: center;
   display: block;
 }
+
+/* =========================================================
+   BOTÃO CARRINHO AZUL NAS RECEITAS E LISTA DE COMPRAS (FASE 7)
+   ========================================================= */
+.btn-carrinho-azul-mini {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: 1px solid rgba(43, 108, 176, 0.25);
+  background-color: var(--pastel-azul);
+  color: var(--pastel-azul-icone);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.15s, background-color 0.2s, color 0.2s;
+}
+
+.btn-carrinho-azul-mini:hover {
+  background-color: var(--pastel-azul-icone);
+  color: #FFFFFF;
+  transform: scale(1.04);
+}
+
+.btn-carrinho-azul-mini svg {
+  width: 19px;
+  height: 19px;
+}
+
+.btn-carrinho-azul-mini.ja-na-lista {
+  background-color: var(--pastel-verde);
+  color: var(--pastel-verde-icone);
+  border-color: #BFE3C3;
+}
+
+.btn-enviar-todos-faltantes {
+  margin-top: 10px;
+  width: 100%;
+  background-color: var(--pastel-azul);
+  color: var(--pastel-azul-icone);
+  border: 1px solid rgba(43, 108, 176, 0.28);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.btn-enviar-todos-faltantes:hover {
+  background-color: var(--pastel-azul-icone);
+  color: #FFFFFF;
+}
+
+.btn-enviar-todos-faltantes svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Painel de Resumo e Finalizar Lista */
+.barra-resumo-compras {
+  background-color: var(--bg-cartao);
+  border: 1px solid var(--borda-suave);
+  border-radius: 18px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--sombra-suave);
+}
+
+.resumo-compras-contadores {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Cartões Interativos da Lista de Compras */
+.card-compra-item {
+  background-color: var(--bg-cartao);
+  border: 1px solid var(--borda-suave);
+  border-radius: 18px;
+  padding: 13px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: var(--sombra-suave);
+  transition: background-color 0.2s, opacity 0.2s, border-color 0.2s;
+}
+
+.card-compra-item.item-riscado {
+  background-color: #F4F7F4;
+  border-color: #DCE5DC;
+  opacity: 0.78;
+}
+
+.area-toque-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-visual-compra {
+  width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  border: 2px solid var(--pastel-azul-icone);
+  background-color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #FFFFFF;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.checkbox-visual-compra svg {
+  width: 16px;
+  height: 16px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.item-riscado .checkbox-visual-compra {
+  background-color: var(--verde-destaque);
+  border-color: var(--verde-destaque);
+}
+
+.item-riscado .checkbox-visual-compra svg {
+  opacity: 1;
+}
+
+.compra-texto-bloco {
+  min-width: 0;
+  flex: 1;
+}
+
+.compra-item-nome {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: var(--texto-principal);
+  transition: color 0.15s;
+}
+
+.item-riscado .compra-item-nome {
+  text-decoration: line-through;
+  color: var(--texto-suave);
+}
+
+.compra-item-meta {
+  font-size: 0.78rem;
+  color: var(--texto-suave);
+  margin-top: 3px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.tag-origem-receita {
+  background-color: var(--pastel-lavanda);
+  color: var(--pastel-lavanda-icone);
+  font-size: 0.71rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+.controles-qtd-compra {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn-stepper-compra {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  border: 1px solid var(--borda-suave);
+  background-color: var(--bg-campo);
+  color: var(--texto-principal);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-stepper-compra:hover {
+  background-color: var(--pastel-azul);
+  color: var(--pastel-azul-icone);
+}
+
+.qtd-compra-badge {
+  min-width: 28px;
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--texto-principal);
+}

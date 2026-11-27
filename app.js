@@ -1,5 +1,5 @@
 // =========================================================
-// MINHA CASA, MINHA DESPENSA - LÓGICA PRINCIPAL (FASE 6.6)
+// MINHA CASA, MINHA DESPENSA - LÓGICA PRINCIPAL (FASE 7)
 // =========================================================
 import { auth, db } from "./firebase-config.js";
 import {
@@ -30,11 +30,13 @@ import { calcularFracaoEmbalagem } from "./conversor-medidas.js";
 // Estado global sincronizado em tempo real
 let listaProdutosDespensa = [];
 let listaReceitas = [];
+let listaCompras = [];
 let receitaAbertaId = null;
 
 let cancelarEscutaDespensa = null;
 let cancelarEscutaRetiradas = null;
 let cancelarEscutaReceitas = null;
+let cancelarEscutaCompras = null;
 let filtroGrupoAtual = "Todos";
 
 const telaLogin = document.getElementById("tela-login");
@@ -86,6 +88,17 @@ function mostrarMensagemRetirada(texto, tipo = "sucesso") {
 
 function mostrarMensagemReceitas(texto, tipo = "sucesso") {
   const box = document.getElementById("receitas-mensagem");
+  if (!box) return;
+  box.textContent = texto;
+  box.className = `mensagem-feedback ${
+    tipo === "erro" ? "mensagem-erro" : "mensagem-sucesso"
+  }`;
+  box.classList.remove("oculto");
+  setTimeout(() => box.classList.add("oculto"), 5000);
+}
+
+function mostrarMensagemCompras(texto, tipo = "sucesso") {
+  const box = document.getElementById("compras-mensagem");
   if (!box) return;
   box.textContent = texto;
   box.className = `mensagem-feedback ${
@@ -544,7 +557,360 @@ function iniciarEscutaHistoricoRetiradas() {
 }
 
 // =========================================================
-// 5. RECEITAS INTELIGENTES + BAIXA EM LOTE AO PREPARAR
+// 5. LISTA DE COMPRAS INTERATIVA (FASE 7)
+// =========================================================
+function itemJaEstaNaListaCompras(produtoId, nomeItem = "") {
+  if (produtoId) {
+    return listaCompras.some((item) => !item.comprado && item.produtoId === produtoId);
+  }
+  const nomeNorm = nomeItem.toLowerCase().trim();
+  return listaCompras.some(
+    (item) => !item.comprado && (item.nome || "").toLowerCase().trim() === nomeNorm
+  );
+}
+
+async function adicionarItemNaListaCompras({
+  produtoId = null,
+  nome,
+  quantidadeComprar = 1,
+  detalheEmbalagem = "",
+  observacao = "",
+  origemReceita = ""
+}) {
+  const usuarioEmail = auth.currentUser ? auth.currentUser.email : "familiar";
+
+  // Evita duplicar itens já pendentes na lista
+  const existente = listaCompras.find(
+    (item) =>
+      !item.comprado &&
+      ((produtoId && item.produtoId === produtoId) ||
+        (!produtoId && (item.nome || "").toLowerCase().trim() === nome.toLowerCase().trim()))
+  );
+
+  if (existente) {
+    const novaQtd = Math.max(Number(existente.quantidadeComprar) || 1, Math.ceil(quantidadeComprar));
+    await updateDoc(doc(db, "lista_compras", existente.id), {
+      quantidadeComprar: novaQtd,
+      origemReceita: origemReceita || existente.origemReceita || ""
+    });
+    return { status: "atualizado", nome, quantidade: novaQtd };
+  }
+
+  await addDoc(collection(db, "lista_compras"), {
+    produtoId: produtoId || null,
+    nome: nome.trim(),
+    quantidadeComprar: Math.max(1, Math.ceil(quantidadeComprar)),
+    detalheEmbalagem: detalheEmbalagem || "",
+    observacao: observacao.trim(),
+    origemReceita: origemReceita || "",
+    comprado: false,
+    adicionadoPor: usuarioEmail,
+    criadoEm: serverTimestamp()
+  });
+
+  return { status: "adicionado", nome, quantidade: Math.max(1, Math.ceil(quantidadeComprar)) };
+}
+
+function atualizarSelectProdutosCompra() {
+  const select = document.getElementById("compra-produto-select");
+  if (!select) return;
+
+  if (listaProdutosDespensa.length === 0) {
+    select.innerHTML = `<option value="">Nenhum produto cadastrado na despensa ainda</option>`;
+    return;
+  }
+
+  select.innerHTML = listaProdutosDespensa
+    .map(
+      (p) =>
+        `<option value="${p.id}">${p.nome} (${formatarNumero(p.tamanhoEmbalagem)}${p.unidadeEmbalagem}) — Em casa: ${formatarNumero(p.quantidadeAtual)}</option>`
+    )
+    .join("");
+}
+
+function abrirFormularioCompra() {
+  atualizarSelectProdutosCompra();
+  document.getElementById("form-compra").reset();
+  document.getElementById("compra-origem").value = "despensa";
+  document.getElementById("grupo-compra-produto-despensa").classList.remove("oculto");
+  document.getElementById("grupo-compra-nome-avulso").classList.add("oculto");
+  document.getElementById("painel-form-compra").classList.remove("oculto");
+  document.getElementById("painel-form-compra").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function fecharFormularioCompra() {
+  document.getElementById("painel-form-compra").classList.add("oculto");
+  document.getElementById("form-compra").reset();
+}
+
+function renderizarListaCompras() {
+  const container = document.getElementById("lista-itens-compras");
+  const contadorPendentes = document.getElementById("contador-compras-pendentes");
+  const contadorRiscados = document.getElementById("contador-compras-riscados");
+  const btnFinalizar = document.getElementById("btn-finalizar-lista");
+  const textoBtnFinalizar = document.getElementById("texto-btn-finalizar-lista");
+
+  if (!container) return;
+
+  const pendentes = listaCompras.filter((i) => !i.comprado);
+  const riscados = listaCompras.filter((i) => i.comprado);
+
+  contadorPendentes.textContent = `${pendentes.length} ${pendentes.length === 1 ? "pendente" : "pendentes"}`;
+  contadorRiscados.textContent = `${riscados.length} no carrinho`;
+
+  if (riscados.length > 0) {
+    btnFinalizar.classList.remove("oculto");
+    textoBtnFinalizar.textContent = `Finalizar Lista (${riscados.length} ${riscados.length === 1 ? "item" : "itens"})`;
+  } else {
+    btnFinalizar.classList.add("oculto");
+  }
+
+  // Ordena deixando os pendentes no topo e os riscados abaixo
+  const ordenados = [...pendentes, ...riscados];
+
+  if (ordenados.length === 0) {
+    container.innerHTML = `<p class="estado-vazio">Sua lista de compras está vazia! Adicione itens acima ou envie o que falta direto de uma receita.</p>`;
+    return;
+  }
+
+  container.innerHTML = ordenados
+    .map((item) => {
+      const qtd = Number(item.quantidadeComprar) || 1;
+      const detalheHtml = item.detalheEmbalagem ? `<span>${item.detalheEmbalagem}</span>` : "";
+      const obsHtml = item.observacao ? `<span>• ${item.observacao}</span>` : "";
+      const tagReceitaHtml = item.origemReceita
+        ? `<span class="tag-origem-receita">Receita: ${item.origemReceita}</span>`
+        : "";
+      const tipoVinculoHtml = item.produtoId ? "" : `<span>• Avulso</span>`;
+
+      return `
+        <article class="card-compra-item ${item.comprado ? "item-riscado" : ""}" data-compra-id="${item.id}">
+          <div class="area-toque-checkbox" data-acao-compra="toggle" data-id="${item.id}">
+            <div class="checkbox-visual-compra">${ICONES.check}</div>
+            <div class="compra-texto-bloco">
+              <div class="compra-item-nome">${item.nome}</div>
+              <div class="compra-item-meta">
+                ${detalheHtml}
+                ${obsHtml}
+                ${tipoVinculoHtml}
+                ${tagReceitaHtml}
+              </div>
+            </div>
+          </div>
+
+          <div class="controles-qtd-compra">
+            <button type="button" class="btn-stepper-compra" data-acao-compra="diminuir" data-id="${item.id}" title="Diminuir quantidade">−</button>
+            <span class="qtd-compra-badge">${qtd}</span>
+            <button type="button" class="btn-stepper-compra" data-acao-compra="aumentar" data-id="${item.id}" title="Aumentar quantidade">+</button>
+            <button type="button" class="btn-mini-acao excluir" data-acao-compra="excluir" data-id="${item.id}" title="Remover da lista">
+              ${ICONES.lixeira}
+            </button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  container.querySelectorAll("[data-acao-compra]").forEach((el) => {
+    el.addEventListener("click", async () => {
+      const id = el.dataset.id;
+      const acao = el.dataset.acaoCompra;
+      const item = listaCompras.find((c) => c.id === id);
+      if (!item) return;
+
+      try {
+        if (acao === "toggle") {
+          await updateDoc(doc(db, "lista_compras", id), {
+            comprado: !item.comprado
+          });
+        } else if (acao === "aumentar") {
+          await updateDoc(doc(db, "lista_compras", id), {
+            quantidadeComprar: (Number(item.quantidadeComprar) || 1) + 1
+          });
+        } else if (acao === "diminuir") {
+          const atual = Number(item.quantidadeComprar) || 1;
+          if (atual > 1) {
+            await updateDoc(doc(db, "lista_compras", id), {
+              quantidadeComprar: atual - 1
+            });
+          }
+        } else if (acao === "excluir") {
+          await deleteDoc(doc(db, "lista_compras", id));
+        }
+      } catch (erro) {
+        console.error("Erro ao atualizar item da lista de compras:", erro);
+        mostrarMensagemCompras("Erro ao atualizar item. Verifique sua conexão.", "erro");
+      }
+    });
+  });
+}
+
+function configurarModuloCompras() {
+  const selectOrigem = document.getElementById("compra-origem");
+  const grupoDespensa = document.getElementById("grupo-compra-produto-despensa");
+  const grupoAvulso = document.getElementById("grupo-compra-nome-avulso");
+
+  selectOrigem.addEventListener("change", () => {
+    if (selectOrigem.value === "despensa") {
+      grupoDespensa.classList.remove("oculto");
+      grupoAvulso.classList.add("oculto");
+    } else {
+      grupoDespensa.classList.add("oculto");
+      grupoAvulso.classList.remove("oculto");
+      document.getElementById("compra-nome-avulso").focus();
+    }
+  });
+
+  document.getElementById("btn-abrir-form-compra").addEventListener("click", abrirFormularioCompra);
+  document.getElementById("btn-fechar-form-compra").addEventListener("click", fecharFormularioCompra);
+  document.getElementById("btn-cancelar-compra").addEventListener("click", fecharFormularioCompra);
+
+  document.getElementById("form-compra").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const origem = selectOrigem.value;
+    const qtd = parseInt(document.getElementById("compra-quantidade").value, 10) || 1;
+    const observacao = document.getElementById("compra-observacao").value.trim();
+
+    let dadosNovoItem = null;
+
+    if (origem === "despensa") {
+      const produtoId = document.getElementById("compra-produto-select").value;
+      const produto = listaProdutosDespensa.find((p) => p.id === produtoId);
+      if (!produto) {
+        mostrarMensagemCompras("Selecione um produto da despensa ou mude para Item avulso.", "erro");
+        return;
+      }
+      dadosNovoItem = {
+        produtoId: produto.id,
+        nome: produto.nome,
+        quantidadeComprar: qtd,
+        detalheEmbalagem: `emb. ${formatarNumero(produto.tamanhoEmbalagem)}${produto.unidadeEmbalagem}`,
+        observacao
+      };
+    } else {
+      const nomeAvulso = document.getElementById("compra-nome-avulso").value.trim();
+      if (!nomeAvulso) {
+        mostrarMensagemCompras("Digite o nome do item avulso.", "erro");
+        return;
+      }
+      dadosNovoItem = {
+        produtoId: null,
+        nome: nomeAvulso,
+        quantidadeComprar: qtd,
+        detalheEmbalagem: "unid.",
+        observacao
+      };
+    }
+
+    const btnSalvar = document.getElementById("btn-salvar-compra");
+    btnSalvar.disabled = true;
+
+    try {
+      const res = await adicionarItemNaListaCompras(dadosNovoItem);
+      fecharFormularioCompra();
+      mostrarMensagemCompras(
+        res.status === "atualizado"
+          ? `"${res.nome}" já estava na lista e teve a quantidade ajustada para ${res.quantidade}.`
+          : `"${res.nome}" adicionado à Lista de Compras!`
+      );
+    } catch (erro) {
+      console.error("Erro ao adicionar item na lista:", erro);
+      mostrarMensagemCompras("Erro ao adicionar item na lista.", "erro");
+    } finally {
+      btnSalvar.disabled = false;
+    }
+  });
+
+  // Botão Dinâmico: Finalizar Lista e Repor Estoque
+  document.getElementById("btn-finalizar-lista").addEventListener("click", async () => {
+    const riscados = listaCompras.filter((i) => i.comprado);
+    if (riscados.length === 0) return;
+
+    const vinculados = riscados.filter((i) => i.produtoId);
+    const resumoReposicao =
+      vinculados.length > 0
+        ? `\n\nSerão somados automaticamente ao estoque da despensa:\n` +
+          vinculados.map((v) => `• +${v.quantidadeComprar} emb. de ${v.nome}`).join("\n")
+        : "";
+
+    const confirmou = window.confirm(
+      `Finalizar compra de ${riscados.length} ${riscados.length === 1 ? "item marcado" : "itens marcados"}?${resumoReposicao}\n\nItens não marcados permanecerão na lista.`
+    );
+
+    if (!confirmou) return;
+
+    const btnFinalizar = document.getElementById("btn-finalizar-lista");
+    btnFinalizar.disabled = true;
+
+    try {
+      const batch = writeBatch(db);
+      const usuarioEmail = auth.currentUser ? auth.currentUser.email : "familiar";
+
+      // Soma quantidades por produtoId caso exista mais de uma entrada
+      const somaPorProduto = new Map();
+      riscados.forEach((item) => {
+        if (item.produtoId) {
+          const atual = somaPorProduto.get(item.produtoId) || 0;
+          somaPorProduto.set(item.produtoId, atual + (Number(item.quantidadeComprar) || 1));
+        }
+        batch.delete(doc(db, "lista_compras", item.id));
+      });
+
+      somaPorProduto.forEach((qtdComprada, produtoId) => {
+        const produtoDespensa = listaProdutosDespensa.find((p) => p.id === produtoId);
+        if (!produtoDespensa) return;
+
+        const saldoAnterior = Number(produtoDespensa.quantidadeAtual) || 0;
+        const novoSaldo = Number((saldoAnterior + qtdComprada).toFixed(4));
+
+        batch.update(doc(db, "despensa", produtoId), {
+          quantidadeAtual: novoSaldo,
+          atualizadoPor: usuarioEmail,
+          atualizadoEm: serverTimestamp()
+        });
+      });
+
+      await batch.commit();
+      mostrarMensagemCompras(
+        `Compra finalizada! ${riscados.length} ${riscados.length === 1 ? "item concluído" : "itens concluídos"} e estoque da despensa atualizado.`
+      );
+    } catch (erro) {
+      console.error("Erro ao finalizar lista de compras:", erro);
+      mostrarMensagemCompras("Erro ao finalizar lista. Tente novamente.", "erro");
+    } finally {
+      btnFinalizar.disabled = false;
+    }
+  });
+}
+
+function iniciarEscutaListaCompras() {
+  if (cancelarEscutaCompras) cancelarEscutaCompras();
+
+  cancelarEscutaCompras = onSnapshot(
+    collection(db, "lista_compras"),
+    (snapshot) => {
+      listaCompras = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      }));
+
+      // Ordena por nome para manter a lista organizada
+      listaCompras.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+
+      renderizarListaCompras();
+      if (receitaAbertaId) {
+        renderizarDetalheReceita();
+      }
+    },
+    (erro) => {
+      console.error("Erro ao sincronizar lista de compras:", erro);
+    }
+  );
+}
+
+// =========================================================
+// 6. RECEITAS INTELIGENTES + BOTÕES DE CARRINHO AZUL
 // =========================================================
 function obterMedidasUniversaisReceita() {
   return MEDIDAS_FIXAS.unidadesRetiradaReceita.filter((u) => u.id !== "pacote");
@@ -621,6 +987,7 @@ function avaliarDisponibilidadeReceita(receita) {
         nomeExibicao,
         unidadeLabel,
         disponivel: false,
+        pacotesSugeridosCompra: 1,
         motivoFalta: `${nomeExibicao} (${formatarNumero(ing.quantidade)} ${unidadeLabel}) — não cadastrado na despensa`
       };
     }
@@ -631,9 +998,11 @@ function avaliarDisponibilidadeReceita(receita) {
     if (!conversao.valido) {
       return {
         ...ing,
+        produtoRef: produto,
         nomeExibicao,
         unidadeLabel,
         disponivel: false,
+        pacotesSugeridosCompra: 1,
         motivoFalta: `${nomeExibicao} — medida incompatível com o cadastro (${produto.unidadeEmbalagem})`
       };
     }
@@ -641,6 +1010,8 @@ function avaliarDisponibilidadeReceita(receita) {
     const temSuficiente = saldoAtual + 0.0005 >= conversao.fracaoPacote;
 
     if (!temSuficiente) {
+      const fracaoFaltante = Math.max(0.01, conversao.fracaoPacote - saldoAtual);
+      const pacotesSugeridosCompra = Math.max(1, Math.ceil(fracaoFaltante));
       const textoSaldo =
         saldoAtual <= 0
           ? "zerado na despensa"
@@ -648,9 +1019,11 @@ function avaliarDisponibilidadeReceita(receita) {
 
       return {
         ...ing,
+        produtoRef: produto,
         nomeExibicao,
         unidadeLabel,
         disponivel: false,
+        pacotesSugeridosCompra,
         motivoFalta: `${nomeExibicao} (${formatarNumero(ing.quantidade)} ${unidadeLabel}) — ${textoSaldo}`
       };
     }
@@ -800,8 +1173,35 @@ function renderizarDetalheReceita() {
     boxSelo.innerHTML = `
       <strong>❌ Faltam ingredientes para esta receita</strong>
       <ul class="lista-faltantes-selo">${itensFaltantesHtml}</ul>
+      <button type="button" id="btn-enviar-todos-faltantes-lista" class="btn-enviar-todos-faltantes">
+        ${ICONES.carrinho}
+        <span>Enviar Todos os Faltantes para a Lista de Compras</span>
+      </button>
     `;
     boxAcaoConcluir.classList.add("oculto");
+
+    document.getElementById("btn-enviar-todos-faltantes-lista").addEventListener("click", async () => {
+      try {
+        for (const faltante of avaliacao.faltantes) {
+          const prod = faltante.produtoRef;
+          await adicionarItemNaListaCompras({
+            produtoId: prod ? prod.id : null,
+            nome: faltante.nomeExibicao,
+            quantidadeComprar: faltante.pacotesSugeridosCompra || 1,
+            detalheEmbalagem: prod
+              ? `emb. ${formatarNumero(prod.tamanhoEmbalagem)}${prod.unidadeEmbalagem}`
+              : `${formatarNumero(faltante.quantidade)} ${faltante.unidadeLabel}`,
+            origemReceita: receita.nome
+          });
+        }
+        mostrarMensagemReceitas(
+          `${avaliacao.faltantes.length} ${avaliacao.faltantes.length === 1 ? "item enviado" : "itens enviados"} para a Lista de Compras!`
+        );
+      } catch (erro) {
+        console.error("Erro ao enviar faltantes:", erro);
+        mostrarMensagemReceitas("Erro ao enviar itens para a Lista de Compras.", "erro");
+      }
+    });
   }
 
   document.getElementById("detalhe-rec-tipo").textContent = receita.tipoRefeicao;
@@ -811,21 +1211,66 @@ function renderizarDetalheReceita() {
 
   const containerIng = document.getElementById("detalhe-rec-ingredientes");
   containerIng.innerHTML = avaliacao.ingredientesAvaliados
-    .map(
-      (ing) => `
+    .map((ing, idx) => {
+      const jaNaLista = !ing.disponivel && itemJaEstaNaListaCompras(ing.produtoId, ing.nomeExibicao);
+      const botaoCarrinhoHtml = !ing.disponivel
+        ? `
+          <button
+            type="button"
+            class="btn-carrinho-azul-mini ${jaNaLista ? "ja-na-lista" : ""}"
+            data-add-compra-ing-idx="${idx}"
+            title="${jaNaLista ? "Já está na Lista de Compras (clique para atualizar)" : "Adicionar à Lista de Compras"}"
+          >
+            ${jaNaLista ? ICONES.check : ICONES.carrinho}
+          </button>
+        `
+        : "";
+
+      return `
         <div class="item-ingrediente-detalhe ${ing.disponivel ? "" : "ing-faltando"}">
           <div>
             <div class="ing-nome-qtd">
               ${ing.disponivel ? "✅" : "❌"} ${formatarNumero(ing.quantidade)} ${ing.unidadeLabel} de ${ing.nomeExibicao}
             </div>
             <div class="ing-status-subtexto">
-              ${ing.disponivel ? "Disponível na despensa" : ing.motivoFalta}
+              ${ing.disponivel ? "Disponível na despensa" : jaNaLista ? "🛒 Já está na Lista de Compras" : ing.motivoFalta}
             </div>
           </div>
+          ${botaoCarrinhoHtml}
         </div>
-      `
-    )
+      `;
+    })
     .join("");
+
+  // Evento dos botões individuais de carrinho azul
+  containerIng.querySelectorAll("[data-add-compra-ing-idx]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const idx = Number(btn.dataset.addCompraIngIdx);
+      const ing = avaliacao.ingredientesAvaliados[idx];
+      if (!ing) return;
+
+      const prod = ing.produtoRef;
+      try {
+        const res = await adicionarItemNaListaCompras({
+          produtoId: prod ? prod.id : null,
+          nome: ing.nomeExibicao,
+          quantidadeComprar: ing.pacotesSugeridosCompra || 1,
+          detalheEmbalagem: prod
+            ? `emb. ${formatarNumero(prod.tamanhoEmbalagem)}${prod.unidadeEmbalagem}`
+            : `${formatarNumero(ing.quantidade)} ${ing.unidadeLabel}`,
+          origemReceita: receita.nome
+        });
+        mostrarMensagemReceitas(
+          res.status === "atualizado"
+            ? `"${ing.nomeExibicao}" já está na Lista de Compras!`
+            : `"${ing.nomeExibicao}" enviado para a Lista de Compras!`
+        );
+      } catch (erro) {
+        console.error("Erro ao adicionar ingrediente na lista:", erro);
+        mostrarMensagemReceitas("Erro ao adicionar à Lista de Compras.", "erro");
+      }
+    });
+  });
 }
 
 function renderizarListaReceitas() {
@@ -917,14 +1362,12 @@ function configurarModuloReceitas() {
       const batch = writeBatch(db);
       const usuarioEmail = auth.currentUser ? auth.currentUser.email : "familiar";
 
-      // Soma frações caso o mesmo produto apareça mais de uma vez na receita
       const fracaoTotalPorProduto = new Map();
       avaliacao.ingredientesAvaliados.forEach((ing) => {
         const acumulado = fracaoTotalPorProduto.get(ing.produtoId) || 0;
         fracaoTotalPorProduto.set(ing.produtoId, acumulado + ing.fracaoNecessaria);
       });
 
-      // 1. Atualiza o saldo de cada produto na despensa em lote
       const novoSaldoPorProduto = new Map();
       fracaoTotalPorProduto.forEach((fracaoDescontar, produtoId) => {
         const produto = listaProdutosDespensa.find((p) => p.id === produtoId);
@@ -941,7 +1384,6 @@ function configurarModuloReceitas() {
         });
       });
 
-      // 2. Registra cada ingrediente no histórico de retiradas da família
       avaliacao.ingredientesAvaliados.forEach((ing) => {
         const produto = ing.produtoRef;
         const saldos = novoSaldoPorProduto.get(ing.produtoId) || { saldoAtual: 0, novoSaldo: 0 };
@@ -1176,7 +1618,7 @@ function iniciarEscutaReceitas() {
 }
 
 // =========================================================
-// 6. RENDERIZAÇÃO EM TEMPO REAL (TELA INICIAL E DESPENSA)
+// 7. RENDERIZAÇÃO EM TEMPO REAL (TELA INICIAL E DESPENSA)
 // =========================================================
 function obterStatusEstoque(produto) {
   const atual = Number(produto.quantidadeAtual) || 0;
@@ -1341,6 +1783,7 @@ function iniciarEscutaTempoRealDespensa() {
       renderizarResumoVivoInicio();
       renderizarListaGerenciarDespensa();
       atualizarListaProdutosRetirada();
+      atualizarSelectProdutosCompra();
       atualizarTodosSelectsIngredientesReceita();
       renderizarListaReceitas();
       if (receitaAbertaId) {
@@ -1354,7 +1797,7 @@ function iniciarEscutaTempoRealDespensa() {
 }
 
 // =========================================================
-// 7. AUTENTICAÇÃO E VERIFICAÇÃO DE ACESSO DA FAMÍLIA
+// 8. AUTENTICAÇÃO E VERIFICAÇÃO DE ACESSO DA FAMÍLIA
 // =========================================================
 async function verificarPermissaoFamiliar() {
   try {
@@ -1435,6 +1878,10 @@ function configurarEventosLogin() {
       cancelarEscutaReceitas();
       cancelarEscutaReceitas = null;
     }
+    if (cancelarEscutaCompras) {
+      cancelarEscutaCompras();
+      cancelarEscutaCompras = null;
+    }
     await signOut(auth);
   });
 }
@@ -1462,6 +1909,7 @@ onAuthStateChanged(auth, async (user) => {
     iniciarEscutaTempoRealDespensa();
     iniciarEscutaHistoricoRetiradas();
     iniciarEscutaReceitas();
+    iniciarEscutaListaCompras();
   } else {
     telaLogin.classList.remove("oculto");
     appShell.classList.add("oculto");
@@ -1477,6 +1925,7 @@ document.addEventListener("DOMContentLoaded", () => {
   configurarEventosLogin();
   configurarFormularioDespensa();
   configurarFormularioRetirada();
+  configurarModuloCompras();
   configurarModuloReceitas();
 
   document.querySelectorAll(".nav-item").forEach((botao) => {

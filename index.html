@@ -557,21 +557,90 @@
       </section>
 
       <!-- =====================================================
-           5. TELA DE LISTA DE COMPRAS INTERATIVA
+           5. TELA DE LISTA DE COMPRAS INTERATIVA (FASE 7)
            ===================================================== -->
       <section id="tela-compras" class="tela">
-        <div class="cabecalho-secao">
-          <h2>Lista de Compras</h2>
-          <p>Sincronizada em tempo real no supermercado</p>
+        <div class="cabecalho-secao-flex">
+          <div>
+            <h2>Lista de Compras</h2>
+            <p>Toque nos itens para riscar no supermercado</p>
+          </div>
+          <button type="button" id="btn-abrir-form-compra" class="btn btn-primario">
+            <span class="icone-svg-sm" data-icone="cadastrar"></span>
+            <span>+ Item</span>
+          </button>
         </div>
-        <div class="faixa-pastel faixa-amarelo">
-          <div class="faixa-info">
-            <h3>Carrinho Compartilhado</h3>
-            <p>Na <strong>Fase 7</strong>, ativaremos a importação direta das receitas, o toque para riscar itens no mercado e o botão dinâmico <strong>Finalizar Lista</strong>.</p>
+
+        <div id="compras-mensagem" class="mensagem-feedback oculto" role="alert"></div>
+
+        <!-- Formulário Rápido para Adicionar Item à Lista de Compras -->
+        <div id="painel-form-compra" class="cartao-formulario oculto">
+          <div class="cartao-form-topo">
+            <h3>Adicionar à Lista de Compras</h3>
+            <button type="button" id="btn-fechar-form-compra" class="btn-icone-fechar" title="Fechar formulário">
+              <span class="icone-svg-sm" data-icone="fechar"></span>
+            </button>
           </div>
-          <div class="faixa-emblema-branco">
-            <span class="icone-svg" data-icone="compras"></span>
+
+          <form id="form-compra" class="formulario-padrao">
+            <div class="campo-grupo">
+              <label for="compra-origem">1. Tipo de Item *</label>
+              <select id="compra-origem">
+                <option value="despensa">Produto cadastrado na Despensa</option>
+                <option value="avulso">Item avulso (ex: Frutas, Pão, Carne fresca)</option>
+              </select>
+              <small class="dica-campo">Produtos da despensa têm o estoque reposto automaticamente ao finalizar a compra.</small>
+            </div>
+
+            <div id="grupo-compra-produto-despensa" class="campo-grupo">
+              <label for="compra-produto-select">2. Escolher Produto da Despensa *</label>
+              <select id="compra-produto-select"></select>
+              <small class="dica-campo">Mostra o saldo atual em casa para facilitar a decisão.</small>
+            </div>
+
+            <div id="grupo-compra-nome-avulso" class="campo-grupo oculto">
+              <label for="compra-nome-avulso">2. Nome do Item Avulso *</label>
+              <input type="text" id="compra-nome-avulso" placeholder="Ex: Banana Prata, Pão Francês, Queijo Minas">
+              <small class="dica-campo">Itens avulsos não alteram o saldo fixo da despensa ao finalizar.</small>
+            </div>
+
+            <div class="grade-dois-campos">
+              <div class="campo-grupo">
+                <label for="compra-quantidade">3. Quantidade a Comprar *</label>
+                <input type="number" id="compra-quantidade" step="1" min="1" value="1" required>
+                <small class="dica-campo">Número de pacotes ou unidades.</small>
+              </div>
+
+              <div class="campo-grupo">
+                <label for="compra-observacao">4. Observação / Marca (opcional)</label>
+                <input type="text" id="compra-observacao" placeholder="Ex: Integral, sem lactose...">
+                <small class="dica-campo">Lembrete útil na hora de escolher na prateleira.</small>
+              </div>
+            </div>
+
+            <div class="acoes-formulario">
+              <button type="button" id="btn-cancelar-compra" class="btn btn-google">Cancelar</button>
+              <button type="submit" id="btn-salvar-compra" class="btn btn-primario">Adicionar à Lista</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Resumo da Lista + Botão Dinâmico Finalizar Lista -->
+        <div id="painel-resumo-compras" class="barra-resumo-compras">
+          <div class="resumo-compras-contadores">
+            <span id="contador-compras-pendentes" class="contador-pilula badge-azul-suave">0 pendentes</span>
+            <span id="contador-compras-riscados" class="contador-pilula badge-verde-suave">0 no carrinho</span>
           </div>
+
+          <button type="button" id="btn-finalizar-lista" class="btn btn-primario btn-bloco oculto">
+            <span class="icone-svg-sm" data-icone="coracaoCheck"></span>
+            <span id="texto-btn-finalizar-lista">Finalizar Lista e Repor Estoque</span>
+          </button>
+        </div>
+
+        <!-- Lista Interativa de Itens -->
+        <div id="lista-itens-compras" class="lista-cards-estoque">
+          <p class="estado-vazio">Carregando lista de compras...</p>
         </div>
       </section>
 
