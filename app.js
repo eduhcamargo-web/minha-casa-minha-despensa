@@ -1,5 +1,5 @@
 // =========================================================
-// MINHA CASA, MINHA DESPENSA - LÓGICA PRINCIPAL (FASE 7)
+// MINHA CASA, MINHA DESPENSA - LÓGICA PRINCIPAL (FASE 8)
 // =========================================================
 import { auth, db } from "./firebase-config.js";
 import {
@@ -32,12 +32,15 @@ let listaProdutosDespensa = [];
 let listaReceitas = [];
 let listaCompras = [];
 let receitaAbertaId = null;
+let primeiraCargaDespensa = true;
 
 let cancelarEscutaDespensa = null;
 let cancelarEscutaRetiradas = null;
 let cancelarEscutaReceitas = null;
 let cancelarEscutaCompras = null;
 let filtroGrupoAtual = "Todos";
+
+const CHAVE_ALERTAS_NOTIFICADOS = "mc_md_alertas_notificados_v1";
 
 const telaLogin = document.getElementById("tela-login");
 const appShell = document.getElementById("app-shell");
@@ -108,6 +111,17 @@ function mostrarMensagemCompras(texto, tipo = "sucesso") {
   setTimeout(() => box.classList.add("oculto"), 5000);
 }
 
+function mostrarMensagemAlertas(texto, tipo = "sucesso") {
+  const box = document.getElementById("alertas-mensagem");
+  if (!box) return;
+  box.textContent = texto;
+  box.className = `mensagem-feedback ${
+    tipo === "erro" ? "mensagem-erro" : "mensagem-sucesso"
+  }`;
+  box.classList.remove("oculto");
+  setTimeout(() => box.classList.add("oculto"), 5500);
+}
+
 // =========================================================
 // 1. NAVEGAÇÃO ENTRE AS 7 TELAS DO APLICATIVO
 // =========================================================
@@ -128,6 +142,10 @@ export function navegarPara(nomeTela) {
       botao.classList.remove("ativo");
     }
   });
+
+  if (nomeTela === "alertas") {
+    atualizarStatusPainelNotificacoes();
+  }
 
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -557,7 +575,7 @@ function iniciarEscutaHistoricoRetiradas() {
 }
 
 // =========================================================
-// 5. LISTA DE COMPRAS INTERATIVA (FASE 7)
+// 5. LISTA DE COMPRAS INTERATIVA
 // =========================================================
 function itemJaEstaNaListaCompras(produtoId, nomeItem = "") {
   if (produtoId) {
@@ -579,7 +597,6 @@ async function adicionarItemNaListaCompras({
 }) {
   const usuarioEmail = auth.currentUser ? auth.currentUser.email : "familiar";
 
-  // Evita duplicar itens já pendentes na lista
   const existente = listaCompras.find(
     (item) =>
       !item.comprado &&
@@ -665,7 +682,6 @@ function renderizarListaCompras() {
     btnFinalizar.classList.add("oculto");
   }
 
-  // Ordena deixando os pendentes no topo e os riscados abaixo
   const ordenados = [...pendentes, ...riscados];
 
   if (ordenados.length === 0) {
@@ -822,7 +838,6 @@ function configurarModuloCompras() {
     }
   });
 
-  // Botão Dinâmico: Finalizar Lista e Repor Estoque
   document.getElementById("btn-finalizar-lista").addEventListener("click", async () => {
     const riscados = listaCompras.filter((i) => i.comprado);
     if (riscados.length === 0) return;
@@ -847,7 +862,6 @@ function configurarModuloCompras() {
       const batch = writeBatch(db);
       const usuarioEmail = auth.currentUser ? auth.currentUser.email : "familiar";
 
-      // Soma quantidades por produtoId caso exista mais de uma entrada
       const somaPorProduto = new Map();
       riscados.forEach((item) => {
         if (item.produtoId) {
@@ -895,10 +909,10 @@ function iniciarEscutaListaCompras() {
         ...docSnap.data()
       }));
 
-      // Ordena por nome para manter a lista organizada
       listaCompras.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
 
       renderizarListaCompras();
+      renderizarTelaAlertas();
       if (receitaAbertaId) {
         renderizarDetalheReceita();
       }
@@ -910,7 +924,310 @@ function iniciarEscutaListaCompras() {
 }
 
 // =========================================================
-// 6. RECEITAS INTELIGENTES + BOTÕES DE CARRINHO AZUL
+// 6. TELA DE ALERTAS E NOTIFICAÇÕES NO CELULAR (FASE 8)
+// =========================================================
+async function enviarNotificacaoCelular(titulo, corpo) {
+  if (!("Notification" in window) || Notification.permission !== "granted") {
+    return false;
+  }
+
+  const opcoes = {
+    body: corpo,
+    icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%2378B159'/><path d='M25 46L50 27L75 46V72C75 76 72 79 68 79H32C28 79 25 76 25 72V46Z' fill='none' stroke='white' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/></svg>",
+    vibrate: [200, 100, 200],
+    tag: `despensa-alerta-${Date.now()}`
+  };
+
+  try {
+    if ("serviceWorker" in navigator) {
+      const registro = await navigator.serviceWorker.ready;
+      if (registro && registro.showNotification) {
+        await registro.showNotification(titulo, opcoes);
+        return true;
+      }
+    }
+    new Notification(titulo, opcoes);
+    return true;
+  } catch (erro) {
+    console.warn("Não foi possível disparar notificação nativa:", erro);
+    return false;
+  }
+}
+
+function atualizarStatusPainelNotificacoes() {
+  const badge = document.getElementById("status-notificacao-badge");
+  const texto = document.getElementById("texto-status-notificacao");
+  const btnAtivar = document.getElementById("btn-ativar-notificacoes");
+
+  if (!badge || !texto || !btnAtivar) return;
+
+  if (!("Notification" in window)) {
+    badge.textContent = "Instale na Tela Inicial";
+    badge.className = "tag-pastel-mini badge-laranja-suave";
+    texto.textContent =
+      "No iPhone/iPad, toque em Compartilhar → Adicionar à Tela de Início e abra o app pelo ícone para liberar as notificações.";
+    btnAtivar.classList.add("oculto");
+    return;
+  }
+
+  const permissao = Notification.permission;
+
+  if (permissao === "granted") {
+    badge.textContent = "✅ Ativadas neste celular";
+    badge.className = "tag-pastel-mini badge-verde-suave";
+    texto.textContent =
+      "Tudo certo! Este aparelho receberá avisos sempre que algum produto atingir o estoque mínimo ou zerar.";
+    btnAtivar.classList.add("oculto");
+  } else if (permissao === "denied") {
+    badge.textContent = "Bloqueadas no navegador";
+    badge.className = "tag-pastel-mini badge-vermelho-suave";
+    texto.textContent =
+      "As notificações foram bloqueadas nas configurações do navegador. Libere as permissões do site no ícone de cadeado da barra de endereço.";
+    btnAtivar.classList.add("oculto");
+  } else {
+    badge.textContent = "Aguardando ativação";
+    badge.className = "tag-pastel-mini badge-rosa-mini";
+    texto.textContent =
+      "Toque no botão abaixo para autorizar alertas na barra de notificações deste celular.";
+    btnAtivar.classList.remove("oculto");
+  }
+}
+
+function verificarEDispararNovosAlertas(produtos) {
+  let historicoNotificados = {};
+  try {
+    historicoNotificados = JSON.parse(localStorage.getItem(CHAVE_ALERTAS_NOTIFICADOS) || "{}");
+  } catch {
+    historicoNotificados = {};
+  }
+
+  const novosParaNotificar = [];
+
+  produtos.forEach((p) => {
+    const atual = Number(p.quantidadeAtual) || 0;
+    const minimo = Number(p.estoqueMinimo) || 0;
+
+    if (atual <= 0) {
+      if (historicoNotificados[p.id] !== "zerado") {
+        novosParaNotificar.push({ produto: p, nivel: "zerado" });
+      }
+      historicoNotificados[p.id] = "zerado";
+    } else if (atual <= minimo) {
+      if (!historicoNotificados[p.id]) {
+        novosParaNotificar.push({ produto: p, nivel: "baixo" });
+      }
+      historicoNotificados[p.id] = "baixo";
+    } else {
+      delete historicoNotificados[p.id];
+    }
+  });
+
+  try {
+    localStorage.setItem(CHAVE_ALERTAS_NOTIFICADOS, JSON.stringify(historicoNotificados));
+  } catch {
+    // Ignora falha de armazenamento privado
+  }
+
+  // Na primeira carga ao abrir o app, apenas sincroniza o estado atual sem disparar spam
+  if (primeiraCargaDespensa) {
+    primeiraCargaDespensa = false;
+    return;
+  }
+
+  if (novosParaNotificar.length === 0) return;
+
+  if (novosParaNotificar.length === 1) {
+    const item = novosParaNotificar[0];
+    const titulo =
+      item.nivel === "zerado"
+        ? `🚨 Produto zerado: ${item.produto.nome}`
+        : `⚠️ Estoque baixo: ${item.produto.nome}`;
+    const corpo =
+      item.nivel === "zerado"
+        ? `Acabou na despensa! Adicione à Lista de Compras.`
+        : `Restam ${formatarNumero(item.produto.quantidadeAtual)} emb. (mínimo: ${formatarNumero(item.produto.estoqueMinimo)}).`;
+    enviarNotificacaoCelular(titulo, corpo);
+  } else {
+    const nomes = novosParaNotificar.map((n) => n.produto.nome).join(", ");
+    enviarNotificacaoCelular(
+      `⚠️ ${novosParaNotificar.length} produtos precisam de reposição`,
+      `Itens em alerta: ${nomes}.`
+    );
+  }
+}
+
+function renderizarTelaAlertas() {
+  const container = document.getElementById("lista-itens-alertas");
+  const contZerados = document.getElementById("contador-alertas-zerados");
+  const contAcabando = document.getElementById("contador-alertas-acabando");
+  const btnEnviarTodos = document.getElementById("btn-enviar-todos-alertas-compras");
+
+  if (!container) return;
+
+  const zerados = listaProdutosDespensa.filter((p) => (Number(p.quantidadeAtual) || 0) <= 0);
+  const acabando = listaProdutosDespensa.filter((p) => {
+    const atual = Number(p.quantidadeAtual) || 0;
+    const minimo = Number(p.estoqueMinimo) || 0;
+    return atual > 0 && atual <= minimo;
+  });
+
+  contZerados.textContent = `${zerados.length} ${zerados.length === 1 ? "zerado" : "zerados"}`;
+  contAcabando.textContent = `${acabando.length} acabando`;
+
+  const todosAlertas = [...zerados, ...acabando];
+
+  if (todosAlertas.length > 0) {
+    btnEnviarTodos.classList.remove("oculto");
+  } else {
+    btnEnviarTodos.classList.add("oculto");
+  }
+
+  if (todosAlertas.length === 0) {
+    container.innerHTML = `<p class="estado-vazio">🎉 Nenhum item em alerta! Todos os produtos estão acima do estoque mínimo.</p>`;
+    return;
+  }
+
+  container.innerHTML = todosAlertas
+    .map((produto) => {
+      const status = obterStatusEstoque(produto);
+      const jaNaLista = itemJaEstaNaListaCompras(produto.id, produto.nome);
+      const tamFormatado = formatarNumero(produto.tamanhoEmbalagem);
+
+      return `
+        <article class="card-produto ${status.classeCard}">
+          <div class="card-produto-info">
+            <div class="card-produto-topo">
+              <span class="card-produto-nome">${produto.nome}</span>
+              ${status.seloHtml}
+            </div>
+            <div class="card-produto-detalhe">
+              Em casa: <strong>${formatarNumero(produto.quantidadeAtual)}</strong> emb. • Mínimo: ${formatarNumero(produto.estoqueMinimo)} emb. (${tamFormatado}${produto.unidadeEmbalagem})
+            </div>
+          </div>
+
+          <button
+            type="button"
+            class="btn-carrinho-azul-mini ${jaNaLista ? "ja-na-lista" : ""}"
+            data-alerta-add-compra="${produto.id}"
+            title="${jaNaLista ? "Já está na Lista de Compras" : "Enviar para Lista de Compras"}"
+          >
+            ${jaNaLista ? ICONES.check : ICONES.carrinho}
+          </button>
+        </article>
+      `;
+    })
+    .join("");
+
+  container.querySelectorAll("[data-alerta-add-compra]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const prod = listaProdutosDespensa.find((p) => p.id === btn.dataset.alertaAddCompra);
+      if (!prod) return;
+
+      const atual = Number(prod.quantidadeAtual) || 0;
+      const minimo = Number(prod.estoqueMinimo) || 1;
+      const qtdSugerida = Math.max(1, Math.ceil(minimo - atual) || 1);
+
+      try {
+        await adicionarItemNaListaCompras({
+          produtoId: prod.id,
+          nome: prod.nome,
+          quantidadeComprar: qtdSugerida,
+          detalheEmbalagem: `emb. ${formatarNumero(prod.tamanhoEmbalagem)}${prod.unidadeEmbalagem}`
+        });
+        mostrarMensagemAlertas(`"${prod.nome}" enviado para a Lista de Compras!`);
+      } catch (erro) {
+        console.error("Erro ao enviar alerta para compras:", erro);
+        mostrarMensagemAlertas("Erro ao adicionar item na lista de compras.", "erro");
+      }
+    });
+  });
+}
+
+function configurarModuloAlertas() {
+  atualizarStatusPainelNotificacoes();
+
+  document.getElementById("btn-ativar-notificacoes").addEventListener("click", async () => {
+    if (!("Notification" in window)) return;
+
+    try {
+      const resultado = await Notification.requestPermission();
+      atualizarStatusPainelNotificacoes();
+
+      if (resultado === "granted") {
+        mostrarMensagemAlertas("Notificações ativadas com sucesso neste celular!");
+        await enviarNotificacaoCelular(
+          "Minha Casa, Minha Despensa",
+          "Notificações ativadas! Avisaremos quando algum item estiver acabando."
+        );
+      } else {
+        mostrarMensagemAlertas("Permissão não concedida pelo navegador.", "erro");
+      }
+    } catch (erro) {
+      console.error("Erro ao solicitar permissão de notificação:", erro);
+    }
+  });
+
+  document.getElementById("btn-testar-notificacao").addEventListener("click", async () => {
+    if (!("Notification" in window)) {
+      mostrarMensagemAlertas(
+        "Instale o app na Tela Inicial do celular primeiro para testar notificações.",
+        "erro"
+      );
+      return;
+    }
+
+    if (Notification.permission !== "granted") {
+      const perm = await Notification.requestPermission();
+      atualizarStatusPainelNotificacoes();
+      if (perm !== "granted") {
+        mostrarMensagemAlertas("Ative a permissão de notificação primeiro.", "erro");
+        return;
+      }
+    }
+
+    const enviou = await enviarNotificacaoCelular(
+      "🔔 Teste de Alerta da Despensa",
+      "Perfeito! As notificações estão funcionando neste celular."
+    );
+
+    if (enviou) {
+      mostrarMensagemAlertas("Notificação de teste enviada para a barra do seu aparelho!");
+    } else {
+      mostrarMensagemAlertas("Não foi possível exibir a notificação neste navegador.", "erro");
+    }
+  });
+
+  document.getElementById("btn-enviar-todos-alertas-compras").addEventListener("click", async () => {
+    const emAlerta = listaProdutosDespensa.filter(
+      (p) => (Number(p.quantidadeAtual) || 0) <= (Number(p.estoqueMinimo) || 0)
+    );
+    if (emAlerta.length === 0) return;
+
+    try {
+      for (const prod of emAlerta) {
+        const atual = Number(prod.quantidadeAtual) || 0;
+        const minimo = Number(prod.estoqueMinimo) || 1;
+        const qtdSugerida = Math.max(1, Math.ceil(minimo - atual) || 1);
+
+        await adicionarItemNaListaCompras({
+          produtoId: prod.id,
+          nome: prod.nome,
+          quantidadeComprar: qtdSugerida,
+          detalheEmbalagem: `emb. ${formatarNumero(prod.tamanhoEmbalagem)}${prod.unidadeEmbalagem}`
+        });
+      }
+      mostrarMensagemAlertas(
+        `${emAlerta.length} ${emAlerta.length === 1 ? "item enviado" : "itens enviados"} para a Lista de Compras!`
+      );
+    } catch (erro) {
+      console.error("Erro ao enviar alertas em lote:", erro);
+      mostrarMensagemAlertas("Erro ao enviar itens para a Lista de Compras.", "erro");
+    }
+  });
+}
+
+// =========================================================
+// 7. RECEITAS INTELIGENTES + BOTÕES DE CARRINHO AZUL
 // =========================================================
 function obterMedidasUniversaisReceita() {
   return MEDIDAS_FIXAS.unidadesRetiradaReceita.filter((u) => u.id !== "pacote");
@@ -1242,7 +1559,6 @@ function renderizarDetalheReceita() {
     })
     .join("");
 
-  // Evento dos botões individuais de carrinho azul
   containerIng.querySelectorAll("[data-add-compra-ing-idx]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const idx = Number(btn.dataset.addCompraIngIdx);
@@ -1336,7 +1652,6 @@ function configurarModuloReceitas() {
     adicionarLinhaIngredienteForm(null);
   });
 
-  // Botão "Receita Feita! Descontar Todos os Ingredientes"
   document.getElementById("btn-concluir-receita").addEventListener("click", async () => {
     const receita = listaReceitas.find((r) => r.id === receitaAbertaId);
     if (!receita) return;
@@ -1420,7 +1735,6 @@ function configurarModuloReceitas() {
     }
   });
 
-  // Botões do Mini-Cadastro de Novo Ingrediente dentro da Receita
   document.getElementById("btn-toggle-novo-produto-receita").addEventListener("click", () => {
     const box = document.getElementById("box-novo-produto-receita");
     abrirFecharMiniCadastroReceita(box.classList.contains("oculto"));
@@ -1618,7 +1932,7 @@ function iniciarEscutaReceitas() {
 }
 
 // =========================================================
-// 7. RENDERIZAÇÃO EM TEMPO REAL (TELA INICIAL E DESPENSA)
+// 8. RENDERIZAÇÃO EM TEMPO REAL (TELA INICIAL E DESPENSA)
 // =========================================================
 function obterStatusEstoque(produto) {
   const atual = Number(produto.quantidadeAtual) || 0;
@@ -1770,6 +2084,7 @@ function renderizarListaGerenciarDespensa() {
 function iniciarEscutaTempoRealDespensa() {
   if (cancelarEscutaDespensa) cancelarEscutaDespensa();
 
+  primeiraCargaDespensa = true;
   const consultaDespensa = query(collection(db, "despensa"), orderBy("nome", "asc"));
 
   cancelarEscutaDespensa = onSnapshot(
@@ -1780,10 +2095,12 @@ function iniciarEscutaTempoRealDespensa() {
         ...documento.data()
       }));
 
+      verificarEDispararNovosAlertas(listaProdutosDespensa);
       renderizarResumoVivoInicio();
       renderizarListaGerenciarDespensa();
       atualizarListaProdutosRetirada();
       atualizarSelectProdutosCompra();
+      renderizarTelaAlertas();
       atualizarTodosSelectsIngredientesReceita();
       renderizarListaReceitas();
       if (receitaAbertaId) {
@@ -1797,7 +2114,7 @@ function iniciarEscutaTempoRealDespensa() {
 }
 
 // =========================================================
-// 8. AUTENTICAÇÃO E VERIFICAÇÃO DE ACESSO DA FAMÍLIA
+// 9. AUTENTICAÇÃO E VERIFICAÇÃO DE ACESSO DA FAMÍLIA
 // =========================================================
 async function verificarPermissaoFamiliar() {
   try {
@@ -1926,6 +2243,7 @@ document.addEventListener("DOMContentLoaded", () => {
   configurarFormularioDespensa();
   configurarFormularioRetirada();
   configurarModuloCompras();
+  configurarModuloAlertas();
   configurarModuloReceitas();
 
   document.querySelectorAll(".nav-item").forEach((botao) => {

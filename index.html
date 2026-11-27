@@ -557,7 +557,7 @@
       </section>
 
       <!-- =====================================================
-           5. TELA DE LISTA DE COMPRAS INTERATIVA (FASE 7)
+           5. TELA DE LISTA DE COMPRAS INTERATIVA
            ===================================================== -->
       <section id="tela-compras" class="tela">
         <div class="cabecalho-secao-flex">
@@ -645,21 +645,60 @@
       </section>
 
       <!-- =====================================================
-           6. TELA EXCLUSIVA DE ALERTAS
+           6. TELA EXCLUSIVA DE ALERTAS + NOTIFICAÇÕES NO CELULAR (FASE 8)
            ===================================================== -->
       <section id="tela-alertas" class="tela">
         <div class="cabecalho-secao">
           <h2>Alertas de Reposição</h2>
-          <p>Produtos acabando ou zerados na despensa</p>
+          <p>Itens acabando na despensa e notificações no celular</p>
         </div>
-        <div class="faixa-pastel faixa-rosa">
-          <div class="faixa-info">
-            <h3>Monitoramento e E-mail</h3>
-            <p>Na <strong>Fase 8</strong>, reuniremos aqui os itens em estado laranja ou vermelho e configuraremos o envio automático de e-mails gratuitos via EmailJS.</p>
+
+        <div id="alertas-mensagem" class="mensagem-feedback oculto" role="alert"></div>
+
+        <!-- Cartão de Configuração das Notificações no Celular -->
+        <div class="cartao-notificacao-celular">
+          <div class="notificacao-topo">
+            <div class="notificacao-titulo-grupo">
+              <span class="icone-sino-rosa" data-icone="alertas"></span>
+              <div>
+                <h3>Notificações no Celular</h3>
+                <span id="status-notificacao-badge" class="tag-pastel-mini badge-rosa-mini">Verificando...</span>
+              </div>
+            </div>
           </div>
-          <div class="faixa-emblema-branco">
-            <span class="icone-svg" data-icone="alertas"></span>
+
+          <p id="texto-status-notificacao" class="notificacao-descricao">
+            Ative para receber um aviso na barra do celular sempre que um produto atingir o estoque mínimo ou zerar.
+          </p>
+
+          <div class="notificacao-botoes">
+            <button type="button" id="btn-ativar-notificacoes" class="btn btn-primario">
+              <span class="icone-svg-sm" data-icone="alertas"></span>
+              <span>Ativar Notificações neste Celular</span>
+            </button>
+
+            <button type="button" id="btn-testar-notificacao" class="btn btn-google">
+              <span>Testar Aviso Agora</span>
+            </button>
           </div>
+        </div>
+
+        <!-- Resumo de Itens em Alerta + Envio em Lote para Compras -->
+        <div class="barra-resumo-compras">
+          <div class="resumo-compras-contadores">
+            <span id="contador-alertas-zerados" class="contador-pilula badge-vermelho-suave">0 zerados</span>
+            <span id="contador-alertas-acabando" class="contador-pilula badge-laranja-suave">0 acabando</span>
+          </div>
+
+          <button type="button" id="btn-enviar-todos-alertas-compras" class="btn-enviar-todos-faltantes oculto">
+            <span class="icone-svg-sm" data-icone="carrinho"></span>
+            <span>Enviar Todos os Alertas para a Lista de Compras</span>
+          </button>
+        </div>
+
+        <!-- Lista de Produtos Zerados ou Acabando -->
+        <div id="lista-itens-alertas" class="lista-cards-estoque">
+          <p class="estado-vazio">Analisando estoque da despensa...</p>
         </div>
       </section>
 

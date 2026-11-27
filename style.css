@@ -1533,3 +1533,85 @@ body {
   font-weight: 700;
   color: var(--texto-principal);
 }
+
+/* =========================================================
+   TELA DE ALERTAS E NOTIFICAÇÕES NO CELULAR (FASE 8)
+   ========================================================= */
+.cartao-notificacao-celular {
+  background-color: var(--bg-cartao);
+  border: 1px solid var(--borda-suave);
+  border-radius: 20px;
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: var(--sombra-suave);
+}
+
+.notificacao-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.notificacao-titulo-grupo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.notificacao-titulo-grupo h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--texto-principal);
+  margin-bottom: 3px;
+}
+
+.icone-sino-rosa {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background-color: var(--pastel-rosa);
+  color: var(--pastel-rosa-icone);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icone-sino-rosa svg {
+  width: 22px;
+  height: 22px;
+}
+
+.notificacao-descricao {
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--texto-suave);
+  margin-bottom: 14px;
+}
+
+.notificacao-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.notificacao-botoes .btn {
+  flex: 1;
+  min-width: 150px;
+}
+
+.badge-rosa-mini {
+  background-color: var(--pastel-rosa);
+  color: var(--pastel-rosa-icone);
+}
+
+.badge-vermelho-suave {
+  background-color: #FDE8E8;
+  color: #C53030;
+}
+
+.badge-laranja-suave {
+  background-color: #FEF0E1;
+  color: #C05621;
+}
